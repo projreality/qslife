@@ -1,5 +1,6 @@
 import os;
 import sys;
+from tables import *;
 import wx;
 
 sys.path.append("lib/olr_import");
@@ -19,6 +20,7 @@ class QSLife(wx.Frame):
 
     # GUI
     self.create_menubar();
+    self.window = wx.SplitterWindow(self, wx.ID_ANY, style=wx.SP_3D);
     self.gui_miscellaneous_setup();
 
 ################################################################################
@@ -44,6 +46,15 @@ class QSLife(wx.Frame):
     self.SetMenuBar(menubar);
 
 ################################################################################
+################################# CREATE WINDOW ################################
+################################################################################
+  def create_window(self):
+    self.tree = wx.TreeCtrl(self.window, wx.ID_ANY);
+    self.tree.AddRoot("/");
+    temp = wx.ListCtrl(self.window, wx.ID_ANY);
+    self.window.SplitVertically(self.tree, temp, 300);
+
+################################################################################
 ############################ GUI MISCELLANEOUS SETUP ###########################
 ################################################################################
   def gui_miscellaneous_setup(self):
@@ -58,6 +69,19 @@ class QSLife(wx.Frame):
   def open_file(self, path):
     self.current_file = path;
     self.SetTitle(path);
+    self.create_window();
+
+    # Populate tree
+    fd = openFile(path, mode="r");
+    root = self.tree.GetRootItem();
+    self.tree.SetItemHasChildren(root);
+    for item in fd.root:
+      tree_item = self.tree.AppendItem(root, item._v_name);
+      for subitem in item:
+	self.tree.AppendItem(tree_item, subitem._v_name);
+    self.tree.Expand(root);
+    fd.close();
+
 
 ################################################################################
 ################################# EVENT HANDLERS ###############################
