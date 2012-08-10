@@ -19,7 +19,7 @@ class QSLife(wx.Frame):
 
     # GUI
     self.create_menubar();
-    self.Show();
+    self.gui_miscellaneous_setup();
 
 ################################################################################
 ############################### CREATE MENUBAR #################################
@@ -42,6 +42,15 @@ class QSLife(wx.Frame):
     self.SetMenuBar(menubar);
 
 ################################################################################
+########################## GUI MISCELLANEOUS SETUP #############################
+################################################################################
+  def gui_miscellaneous_setup(self):
+    self.statusbar = self.CreateStatusBar();
+    self.SetTitle("-");
+    self.Maximize();
+    self.Show();
+
+################################################################################
 ############################### EVENT HANDLERS #################################
 ################################################################################
 
@@ -55,6 +64,8 @@ class QSLife(wx.Frame):
 	if (dialog.ShowModal() == wx.ID_YES):
 	  init.init(path);
 	  self.current_file = path;
+	  self.SetTitle(path);
+	  self.statusbar.SetStatusText("Created new file \"" + path + "\"");
 
 ################################### FILE EXIT ##################################
   def onFileExit(self, e):
