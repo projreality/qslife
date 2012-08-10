@@ -1,5 +1,6 @@
-import os;
 import matplotlib;
+import numpy;
+import os;
 import sys;
 from tables import *;
 import wx;
@@ -66,7 +67,10 @@ class QSLife(wx.Frame):
     self.canvas.SetSize(size);
     self.figure.set_size_inches(float(size[0])/self.figure.get_dpi(), float(size[1])/self.figure.get_dpi());
     subplot = self.figure.add_subplot(111);
-    subplot.plot([ 1, 2, 3 ], [ 1, 4, 9 ]);
+    fd = openFile(self.current_file, mode="r");
+    data = numpy.array([ [ data["time"], data["value"] ] for data in fd.root.Health.hr_nonin3150.where("(time > 1333504000000L) & (time < 1333505000000)") ]);
+    fd.close();
+    subplot.plot(data[:,0], data[:,1]);
 
 ################################################################################
 ############################ GUI MISCELLANEOUS SETUP ###########################
