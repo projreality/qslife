@@ -1,4 +1,10 @@
+import os;
+import sys;
 import wx;
+
+sys.path.append("lib/olr_import");
+
+import init;
 
 class QSLife(wx.Frame):
 
@@ -7,6 +13,11 @@ class QSLife(wx.Frame):
 ################################################################################
   def __init__(self, *args, **kwargs):
     super(QSLife, self).__init__(*args, **kwargs);
+
+    # HDFQS
+    self.current_file = None;
+
+    # GUI
     self.create_menubar();
     self.Show();
 
@@ -19,10 +30,12 @@ class QSLife(wx.Frame):
 ################################# FILE MENU ####################################
     # Structure
     menu_file = wx.Menu();
+    menu_file_new = menu_file.AppendItem(wx.MenuItem(menu_file, wx.ID_NEW, "&New\tCtrl+N"));
     menu_file_exit = menu_file.AppendItem(wx.MenuItem(menu_file, wx.ID_EXIT, "E&xit\tCtrl+Q"));
     menubar.Append(menu_file, "&File");
 
     # Events
+    self.Bind(wx.EVT_MENU, self.onFileNew, menu_file_new);
     self.Bind(wx.EVT_MENU, self.onFileExit, menu_file_exit);
 
 ############################## FINISH MENUBAR ##################################
@@ -32,7 +45,18 @@ class QSLife(wx.Frame):
 ############################### EVENT HANDLERS #################################
 ################################################################################
 
-################################# FILE EXIT ####################################
+################################### FILE NEW ###################################
+  def onFileNew(self, e):
+    dialog = wx.FileDialog(None, "New HDFQS file...", ".", style=wx.FD_SAVE);
+    if (dialog.ShowModal() == wx.ID_OK):
+      path = dialog.GetPath();
+      if (os.path.exists(path)):
+	dialog = wx.MessageDialog(None, "File \"" + path + "\" exists - overwrite?", "Confirm", wx.YES_NO);
+	if (dialog.ShowModal() == wx.ID_YES):
+	  init.init(path);
+	  self.current_file = path;
+
+################################### FILE EXIT ##################################
   def onFileExit(self, e):
     self.Close();
 
