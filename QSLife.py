@@ -23,6 +23,8 @@ class QSLife(wx.Frame):
 
     # HDFQS
     self.current_file = None;
+    self.time_range = ( 0, 0 );
+    self.graphs = [ ];
 
     # GUI
     self.create_menubar();
@@ -66,11 +68,8 @@ class QSLife(wx.Frame):
     size = tuple(panel.GetClientSize());
     self.canvas.SetSize(size);
     self.figure.set_size_inches(float(size[0])/self.figure.get_dpi(), float(size[1])/self.figure.get_dpi());
-    subplot = self.figure.add_subplot(111);
-    fd = openFile(self.current_file, mode="r");
-    data = numpy.array([ [ data["time"], data["value"] ] for data in fd.root.Health.hr_nonin3150.where("(time > 1333504000000L) & (time < 1333505000000)") ]);
-    fd.close();
-    subplot.plot(data[:,0], data[:,1]);
+
+    self.update_graphs();
 
 ################################################################################
 ############################ GUI MISCELLANEOUS SETUP ###########################
@@ -87,6 +86,11 @@ class QSLife(wx.Frame):
   def open_file(self, path):
     self.current_file = path;
     self.SetTitle(path);
+
+    # Temporary hardwired graphs
+    self.time_range = ( 1333504000000L, 1333505000000 );
+    self.graphs = [ [ "/Health/hr_nonin3150", "time", "value" ], [ "/Health/ppg_nonin3150", "time", "value" ] ];
+
     self.create_window();
 
     # Populate tree
@@ -98,6 +102,19 @@ class QSLife(wx.Frame):
       for subitem in item:
 	self.tree.AppendItem(tree_item, subitem._v_name);
     self.tree.Expand(root);
+    fd.close();
+
+################################################################################
+################################# UPDATE GRAPHS ################################
+################################################################################
+  def update_graphs(self):
+    num = len(self.graphs);
+    fd = openFile(self.current_file, mode="r");
+    for i in numpy.arange(num):
+      entry = self.graphs[i];
+      subplot = self.figure.add_subplot(num, 1, i + 1);
+      data = numpy.array([ [ data[entry[1]], data[entry[2]] ] for data in fd.getNode(entry[0]).where("(time > " + str(self.time_range[0]) + ") & (time < " + str(self.time_range[1]) + ")") ]);
+      subplot.plot(data[:,0], data[:,1]);
     fd.close();
 
 ################################################################################
