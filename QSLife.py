@@ -1,11 +1,16 @@
 import os;
+import matplotlib;
 import sys;
 from tables import *;
 import wx;
 
+matplotlib.interactive(True);
+matplotlib.use("WXAgg");
 sys.path.append("lib/olr_import");
 
 import init;
+from matplotlib.backends.backend_wxagg import FigureCanvasWxAgg;
+from matplotlib.figure import Figure;
 
 class QSLife(wx.Frame):
 
@@ -51,8 +56,17 @@ class QSLife(wx.Frame):
   def create_window(self):
     self.tree = wx.TreeCtrl(self.window, wx.ID_ANY);
     self.tree.AddRoot("/");
-    temp = wx.ListCtrl(self.window, wx.ID_ANY);
-    self.window.SplitVertically(self.tree, temp, 300);
+    panel = wx.Panel(self.window, style=wx.NO_FULL_REPAINT_ON_RESIZE);
+    self.window.SplitVertically(self.tree, panel, 300);
+
+    # Matplotlib
+    self.figure = Figure(None, None);
+    self.canvas = FigureCanvasWxAgg(panel, -1, self.figure);
+    size = tuple(panel.GetClientSize());
+    self.canvas.SetSize(size);
+    self.figure.set_size_inches(float(size[0])/self.figure.get_dpi(), float(size[1])/self.figure.get_dpi());
+    subplot = self.figure.add_subplot(111);
+    subplot.plot([ 1, 2, 3 ], [ 1, 4, 9 ]);
 
 ################################################################################
 ############################ GUI MISCELLANEOUS SETUP ###########################
@@ -81,7 +95,6 @@ class QSLife(wx.Frame):
 	self.tree.AppendItem(tree_item, subitem._v_name);
     self.tree.Expand(root);
     fd.close();
-
 
 ################################################################################
 ################################# EVENT HANDLERS ###############################
