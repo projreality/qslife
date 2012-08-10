@@ -1,0 +1,3 @@
+[submodule "lib/olr_import"]
+	path = lib/olr_import
+	url = /var/lib/git/olr_import.git
