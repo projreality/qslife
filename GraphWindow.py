@@ -70,7 +70,10 @@ class GraphWindow(matplotlib.backends.backend_wxagg.FigureCanvasWxAgg):
       entry = self.graphs[i];
       subplot = self.figure.add_subplot(num, 1, i + 1);
       data = array([ [ data[entry[1]], data[entry[2]] ] for data in fd.getNode(entry[0]).where("(time > " + str(self.time_range[0]) + ") & (time < " + str(self.time_range[1]) + ")") ]);
-      subplot.plot(data[:,0], data[:,1]);
+      if (len(data) != 0):
+	subplot.plot(data[:,0], data[:,1]);
+      else:
+	subplot.get_axes().set_xlim(self.time_range);
       ax = subplot.get_axes();
       ax.set_xticks(ticks);
       ax.set_xticklabels(labels);

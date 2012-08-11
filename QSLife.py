@@ -67,7 +67,7 @@ class QSLife(wx.Frame):
     # Matplotlib
     self.graphs = GraphWindow(panel, wx.ID_ANY);
     self.graphs.set_time_range(( 1333504000000, 1333505000000 ));
-    self.graphs.set_graphs([ [ "/Health/hr_nonin3150", "time", "value" ], [ "/Health/ppg_nonin3150", "time", "value" ] ]);
+    self.graphs.set_graphs([ [ "/Health/hr_nonin3150", "time", "value", ( 0, 200 ) ] ]);
     self.graphs.set_current_file(self.current_file);
     self.graphs.set_timezone(-7);
     self.graphs.update();
