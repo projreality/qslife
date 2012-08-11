@@ -41,6 +41,15 @@ class GraphWindow(matplotlib.backends.backend_wxagg.FigureCanvasWxAgg):
     self.graphs = graphs;
 
 ################################################################################
+################################# INSERT GRAPH ################################
+################################################################################
+  def add_graph(self, pos, config):
+    if (pos == -1):
+      self.graphs.append(config);
+    else:
+      self.graphs.insert(pos, config);
+
+################################################################################
 ################################ SET CURRENT FILE ##############################
 ################################################################################
   def set_current_file(self, current_file):
@@ -76,6 +85,7 @@ class GraphWindow(matplotlib.backends.backend_wxagg.FigureCanvasWxAgg):
 	subplot.plot(data[:,0], data[:,1]);
       else:
 	subplot.get_axes().set_xlim(self.time_range);
+      subplot.set_ylabel(entry[0]);
       ax = subplot.get_axes();
       ax.set_xticks(ticks);
       ax.set_xticklabels(labels);
@@ -175,3 +185,17 @@ class GraphWindow(matplotlib.backends.backend_wxagg.FigureCanvasWxAgg):
       i = i + 1;
 
     return ( ticks, labels );
+
+################################################################################
+############################### GRAPH DROP TARGET  #############################
+################################################################################
+class GraphDropTarget(wx.TextDropTarget):
+
+  def __init__(self, object):
+    super(GraphDropTarget, self).__init__();
+    self.object = object;
+
+  def OnDropText(self, x, y, data):
+    config = [ data, "time", "value", ( 50, 150 ) ];
+    self.object.add_graph(-1, config);
+    self.object.update();

@@ -14,6 +14,7 @@ from matplotlib.backends.backend_wxagg import FigureCanvasWxAgg;
 from matplotlib.figure import Figure;
 
 from GraphWindow import GraphWindow;
+from GraphWindow import GraphDropTarget;
 
 class QSLife(wx.Frame):
 
@@ -67,10 +68,16 @@ class QSLife(wx.Frame):
     # Matplotlib
     self.graphs = GraphWindow(panel, wx.ID_ANY);
     self.graphs.set_time_range(( 1333504000000, 1333505000000 ));
-    self.graphs.set_graphs([ [ "/Health/hr_nonin3150", "time", "value", ( 0, 200 ) ], [ "/Health/hr_nonin3150", "time", "value", ( 50, 160 ) ] ]);
+    self.graph_config = [ [ "/Health/hr_nonin3150", "time", "value", ( 0, 200 ) ], [ "/Health/hr_nonin3150", "time", "value", ( 50, 160 ) ] ];
+    self.graphs.set_graphs(self.graph_config);
     self.graphs.set_current_file(self.current_file);
     self.graphs.set_timezone(-7);
     self.graphs.update();
+
+    # Drag-and-drop
+    dt = GraphDropTarget(self.graphs);
+    self.graphs.SetDropTarget(dt);
+    self.Bind(wx.EVT_TREE_BEGIN_DRAG, self.onDragInit, id=self.tree.GetId());
 
 ################################################################################
 ############################ GUI MISCELLANEOUS SETUP ###########################
@@ -131,6 +138,19 @@ class QSLife(wx.Frame):
 ################################### FILE EXIT ##################################
   def onFileExit(self, e):
     self.Close();
+
+################################### DRAG INIT ##################################
+  def onDragInit(self, e):
+    root = self.tree.GetRootItem();
+    item = e.GetItem();
+    parent = self.tree.GetItemParent(item);
+    if ((item == root) or (parent == root)):
+      return;
+    source = "/" + self.tree.GetItemText(parent) + "/" + self.tree.GetItemText(item);
+    tdo = wx.TextDataObject(source);
+    tds = wx.DropSource(self.tree);
+    tds.SetData(tdo);
+    tds.DoDragDrop(True);
 
 
 if (__name__ == "__main__"):
