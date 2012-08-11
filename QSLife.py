@@ -26,7 +26,7 @@ class QSLife(wx.Frame):
     # HDFQS
     self.current_file = None;
     self.time_range = ( 0, 0 );
-    self.graphs = [ ];
+    self.graph_config = [ ];
 
     # GUI
     self.create_menubar();
@@ -67,7 +67,7 @@ class QSLife(wx.Frame):
     # Matplotlib
     self.graphs = GraphWindow(panel, wx.ID_ANY);
     self.graphs.set_time_range(( 1333504000000, 1333505000000 ));
-    self.graphs.set_graphs([ [ "/Health/hr_nonin3150", "time", "value", ( 0, 200 ) ] ]);
+    self.graphs.set_graphs([ [ "/Health/hr_nonin3150", "time", "value", ( 0, 200 ) ], [ "/Health/hr_nonin3150", "time", "value", ( 50, 160 ) ] ]);
     self.graphs.set_current_file(self.current_file);
     self.graphs.set_timezone(-7);
     self.graphs.update();

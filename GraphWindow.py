@@ -25,6 +25,8 @@ class GraphWindow(matplotlib.backends.backend_wxagg.FigureCanvasWxAgg):
     self.graphs = [ ]; # List of data to graph
     self.clip = 1000;
     self.timezone = 0;
+    self.num_visible_graphs = 6;
+    self.top_graph = 0;
 
 ################################################################################
 ################################# SET TIME RANGE ###############################
@@ -66,9 +68,9 @@ class GraphWindow(matplotlib.backends.backend_wxagg.FigureCanvasWxAgg):
 
     num = len(self.graphs);
     fd = openFile(self.current_file, mode="r");
-    for i in arange(num):
+    for i in arange(self.top_graph, num):
       entry = self.graphs[i];
-      subplot = self.figure.add_subplot(num, 1, i + 1);
+      subplot = self.figure.add_subplot(self.num_visible_graphs, 1, i + 1 - self.top_graph);
       data = array([ [ data[entry[1]], data[entry[2]] ] for data in fd.getNode(entry[0]).where("(time > " + str(self.time_range[0]) + ") & (time < " + str(self.time_range[1]) + ")") ]);
       if (len(data) != 0):
 	subplot.plot(data[:,0], data[:,1]);
@@ -108,6 +110,14 @@ class GraphWindow(matplotlib.backends.backend_wxagg.FigureCanvasWxAgg):
       gap = self.time_range[1] - self.time_range[0];
       self.time_range = ( self.time_range[0] + gap/2, self.time_range[1] + gap/2 );
       self.update();
+    elif ((key_code == wx.WXK_NUMPAD_UP) or (key_code == wx.WXK_NUMPAD8) or (key_code == wx.WXK_UP)):
+      if (self.top_graph > 0):
+	self.top_graph = self.top_graph - 1;
+	self.update();
+    elif ((key_code == wx.WXK_NUMPAD_DOWN) or (key_code == wx.WXK_NUMPAD2) or (key_code == wx.WXK_DOWN)):
+      if (self.top_graph < len(self.graphs) - 1):
+	self.top_graph = self.top_graph + 1;
+	self.update();
     else:
       e.Skip();
 
