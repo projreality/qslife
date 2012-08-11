@@ -1,7 +1,11 @@
+from math import *;
 import matplotlib;
-import numpy;
+from numpy import *;
 from tables import *;
+import time;
 import wx;
+
+from matplotlib.pyplot import *;
 
 class GraphWindow(matplotlib.backends.backend_wxagg.FigureCanvasWxAgg):
 
@@ -17,8 +21,9 @@ class GraphWindow(matplotlib.backends.backend_wxagg.FigureCanvasWxAgg):
 
     self.Bind(wx.EVT_KEY_DOWN, self.onKeyDown);
 
-    self.time_range = ( 0, 0 );
-    self.graphs = [ ];
+    self.time_range = ( 0, 0 ); # time range to display data
+    self.graphs = [ ]; # List of data to graph
+    self.clip = 1000;
 
 ################################################################################
 ################################# SET TIME RANGE ###############################
@@ -39,21 +44,36 @@ class GraphWindow(matplotlib.backends.backend_wxagg.FigureCanvasWxAgg):
     self.current_file = current_file;
 
 ################################################################################
+#################################### SET CLIP ##################################
+################################################################################
+  def set_clip(self, clip):
+    self.clip = clip;
+
+################################################################################
 ################################# UPDATE GRAPHS ################################
 ################################################################################
   def update(self):
     self.figure.clear();
 
+    ( ticks, labels ) = self.create_time_labels();
+
     num = len(self.graphs);
     fd = openFile(self.current_file, mode="r");
-    for i in numpy.arange(num):
+    for i in arange(num):
       entry = self.graphs[i];
       subplot = self.figure.add_subplot(num, 1, i + 1);
-      data = numpy.array([ [ data[entry[1]], data[entry[2]] ] for data in fd.getNode(entry[0]).where("(time > " + str(self.time_range[0]) + ") & (time < " + str(self.time_range[1]) + ")") ]);
+      data = array([ [ data[entry[1]], data[entry[2]] ] for data in fd.getNode(entry[0]).where("(time > " + str(self.time_range[0]) + ") & (time < " + str(self.time_range[1]) + ")") ]);
       subplot.plot(data[:,0], data[:,1]);
+      ax = subplot.get_axes();
+      ax.set_xticks(ticks);
+      ax.set_xticklabels(labels);
     fd.close();
+
     self.draw();
 
+################################################################################
+#################################### KEY DOWN ##################################
+################################################################################
   def onKeyDown(self, e):
     key_code = e.GetKeyCode();
 
@@ -79,3 +99,58 @@ class GraphWindow(matplotlib.backends.backend_wxagg.FigureCanvasWxAgg):
       self.update();
     else:
       e.Skip();
+
+################################################################################
+############################## CALCULATE STEP SIZE  ############################
+################################################################################
+  def calculate_step_size(self):
+    gap = (self.time_range[1] - self.time_range[0]) / 1000;
+
+    if (gap <= 5):
+      step_size = 1;
+    elif (gap <= 10):
+      step_size = 2;
+    elif (gap <= 30):
+      step_size = 5;
+    elif (gap < 60):
+      step_size = 10;
+    elif (gap <= 120):
+      step_size = 15;
+    elif (gap <= 300):
+      step_size = 30;
+    elif (gap <= 600):
+      step_size = 60;
+    elif (gap <= 1200):
+      step_size = 150;
+    elif (gap <= 1800):
+      step_size = 300;
+    elif (gap <= 3600):
+      step_size = 450;
+    elif (gap <= 8*3600):
+      step_size = 3600;
+    elif (gap <= 24*3600):
+      step_size = 3*3600;
+    else:
+      step_size = 24*3600;
+
+    step_size = step_size * 1000;
+
+    return step_size;
+
+################################################################################
+############################### CREATE TIME LABELS  ############################
+################################################################################
+  def create_time_labels(self):
+    step_size = self.calculate_step_size();
+    start = floor(self.time_range[0] /float(self.clip))*self.clip;
+    tick_start = ceil(start/float(step_size))*step_size;
+    stop = ceil(self.time_range[1] /float(self.clip))*self.clip;
+    tick_stop = floor(stop/float(step_size))*step_size;
+    ticks = r_[tick_start:tick_stop+step_size:step_size];
+    labels = [ "" ] * len(ticks);
+    i = 0;
+    for tick in ticks:
+      labels[i] = time.strftime("%H:%M:%S", time.gmtime(tick/1000));
+      i = i + 1;
+
+    return ( ticks, labels );
