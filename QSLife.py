@@ -13,6 +13,8 @@ import init;
 from matplotlib.backends.backend_wxagg import FigureCanvasWxAgg;
 from matplotlib.figure import Figure;
 
+from GraphWindow import GraphWindow;
+
 class QSLife(wx.Frame):
 
 ################################################################################
@@ -63,15 +65,11 @@ class QSLife(wx.Frame):
     self.window.SplitVertically(self.tree, panel, 300);
 
     # Matplotlib
-    self.figure = Figure(None, None);
-    self.canvas = FigureCanvasWxAgg(panel, -1, self.figure);
-    size = tuple(panel.GetClientSize());
-    self.canvas.SetSize(size);
-    self.figure.set_size_inches(float(size[0])/self.figure.get_dpi(), float(size[1])/self.figure.get_dpi());
-
-    self.update_graphs();
-
-    self.canvas.Bind(wx.EVT_KEY_DOWN, self.onKeyDown);
+    self.graphs = GraphWindow(panel, wx.ID_ANY);
+    self.graphs.set_time_range(( 1333504000000, 1333505000000 ));
+    self.graphs.set_graphs([ [ "/Health/hr_nonin3150", "time", "value" ], [ "/Health/ppg_nonin3150", "time", "value" ] ]);
+    self.graphs.set_current_file(self.current_file);
+    self.graphs.update();
 
 ################################################################################
 ############################ GUI MISCELLANEOUS SETUP ###########################
@@ -89,10 +87,6 @@ class QSLife(wx.Frame):
     self.current_file = path;
     self.SetTitle(path);
 
-    # Temporary hardwired graphs
-    self.time_range = ( 1333504000000L, 1333505000000 );
-    self.graphs = [ [ "/Health/hr_nonin3150", "time", "value" ], [ "/Health/ppg_nonin3150", "time", "value" ] ];
-
     self.create_window();
 
     # Populate tree
@@ -105,22 +99,6 @@ class QSLife(wx.Frame):
 	self.tree.AppendItem(tree_item, subitem._v_name);
     self.tree.Expand(root);
     fd.close();
-
-################################################################################
-################################# UPDATE GRAPHS ################################
-################################################################################
-  def update_graphs(self):
-    self.figure.clear();
-
-    num = len(self.graphs);
-    fd = openFile(self.current_file, mode="r");
-    for i in numpy.arange(num):
-      entry = self.graphs[i];
-      subplot = self.figure.add_subplot(num, 1, i + 1);
-      data = numpy.array([ [ data[entry[1]], data[entry[2]] ] for data in fd.getNode(entry[0]).where("(time > " + str(self.time_range[0]) + ") & (time < " + str(self.time_range[1]) + ")") ]);
-      subplot.plot(data[:,0], data[:,1]);
-    fd.close();
-    self.canvas.draw();
 
 ################################################################################
 ################################# EVENT HANDLERS ###############################
@@ -152,33 +130,6 @@ class QSLife(wx.Frame):
 ################################### FILE EXIT ##################################
   def onFileExit(self, e):
     self.Close();
-
-#################################### KEY DOWN ##################################
-  def onKeyDown(self, e):
-    key_code = e.GetKeyCode();
-
-    # Zoom in
-    if (key_code == wx.WXK_NUMPAD_ADD):
-      gap = self.time_range[1] - self.time_range[0];
-      self.time_range = ( self.time_range[0] + gap/4, self.time_range[1] - gap/4 );
-      self.update_graphs();
-    # Zoom out
-    elif (key_code == wx.WXK_NUMPAD_SUBTRACT):
-      gap = self.time_range[1] - self.time_range[0];
-      self.time_range = ( self.time_range[0] - gap/2, self.time_range[1] + gap/2 );
-      self.update_graphs();
-    # Move left
-    elif ((key_code == wx.WXK_NUMPAD_LEFT) or (key_code == wx.WXK_NUMPAD4) or (key_code == wx.WXK_LEFT)):
-      gap = self.time_range[1] - self.time_range[0];
-      self.time_range = ( self.time_range[0] - gap/2, self.time_range[1] - gap/2 );
-      self.update_graphs();
-    # Move right
-    elif ((key_code == wx.WXK_NUMPAD_RIGHT) or (key_code == wx.WXK_NUMPAD6) or (key_code == wx.WXK_RIGHT)):
-      gap = self.time_range[1] - self.time_range[0];
-      self.time_range = ( self.time_range[0] + gap/2, self.time_range[1] + gap/2 );
-      self.update_graphs();
-    else:
-      e.Skip();
 
 
 if (__name__ == "__main__"):
