@@ -77,6 +77,7 @@ class GraphWindow(matplotlib.backends.backend_wxagg.FigureCanvasWxAgg):
       ax = subplot.get_axes();
       ax.set_xticks(ticks);
       ax.set_xticklabels(labels);
+      ax.set_ylim(entry[3]);
     fd.close();
 
     self.draw();
