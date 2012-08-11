@@ -71,6 +71,8 @@ class QSLife(wx.Frame):
 
     self.update_graphs();
 
+    self.canvas.Bind(wx.EVT_KEY_DOWN, self.onKeyDown);
+
 ################################################################################
 ############################ GUI MISCELLANEOUS SETUP ###########################
 ################################################################################
@@ -108,6 +110,8 @@ class QSLife(wx.Frame):
 ################################# UPDATE GRAPHS ################################
 ################################################################################
   def update_graphs(self):
+    self.figure.clear();
+
     num = len(self.graphs);
     fd = openFile(self.current_file, mode="r");
     for i in numpy.arange(num):
@@ -116,6 +120,7 @@ class QSLife(wx.Frame):
       data = numpy.array([ [ data[entry[1]], data[entry[2]] ] for data in fd.getNode(entry[0]).where("(time > " + str(self.time_range[0]) + ") & (time < " + str(self.time_range[1]) + ")") ]);
       subplot.plot(data[:,0], data[:,1]);
     fd.close();
+    self.canvas.draw();
 
 ################################################################################
 ################################# EVENT HANDLERS ###############################
@@ -147,6 +152,29 @@ class QSLife(wx.Frame):
 ################################### FILE EXIT ##################################
   def onFileExit(self, e):
     self.Close();
+
+#################################### KEY DOWN ##################################
+  def onKeyDown(self, e):
+    key_code = e.GetKeyCode();
+
+    # Zoom in
+    if (key_code == wx.WXK_NUMPAD_ADD):
+      gap = self.time_range[1] - self.time_range[0];
+      self.time_range = ( self.time_range[0] + gap/4, self.time_range[1] - gap/4 );
+      self.update_graphs();
+    # Zoom out
+    elif (key_code == wx.WXK_NUMPAD_SUBTRACT):
+      gap = self.time_range[1] - self.time_range[0];
+      self.time_range = ( self.time_range[0] - gap/2, self.time_range[1] + gap/2 );
+      self.update_graphs();
+    # Move left
+    elif ((key_code == wx.WXK_NUMPAD_LEFT) or (key_code == wx.WXK_LEFT)):
+      gap = self.time_range[1] - self.time_range[0];
+      self.time_range = ( self.time_range[0] - gap/2, self.time_range[1] - gap/2 );
+      self.update_graphs();
+    else:
+      e.Skip();
+
 
 if (__name__ == "__main__"):
   app = wx.App();
