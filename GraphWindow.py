@@ -24,6 +24,7 @@ class GraphWindow(matplotlib.backends.backend_wxagg.FigureCanvasWxAgg):
     self.time_range = ( 0, 0 ); # time range to display data
     self.graphs = [ ]; # List of data to graph
     self.clip = 1000;
+    self.timezone = 0;
 
 ################################################################################
 ################################# SET TIME RANGE ###############################
@@ -48,6 +49,12 @@ class GraphWindow(matplotlib.backends.backend_wxagg.FigureCanvasWxAgg):
 ################################################################################
   def set_clip(self, clip):
     self.clip = clip;
+
+################################################################################
+################################## SET TIMEZONE ################################
+################################################################################
+  def set_timezone(self, timezone):
+    self.timezone = timezone;
 
 ################################################################################
 ################################# UPDATE GRAPHS ################################
@@ -142,7 +149,7 @@ class GraphWindow(matplotlib.backends.backend_wxagg.FigureCanvasWxAgg):
 ################################################################################
   def create_time_labels(self):
     step_size = self.calculate_step_size();
-    start = floor(self.time_range[0] /float(self.clip))*self.clip;
+    start = floor(self.time_range[0] / float(self.clip))*self.clip;
     tick_start = ceil(start/float(step_size))*step_size;
     stop = ceil(self.time_range[1] /float(self.clip))*self.clip;
     tick_stop = floor(stop/float(step_size))*step_size;
@@ -150,7 +157,7 @@ class GraphWindow(matplotlib.backends.backend_wxagg.FigureCanvasWxAgg):
     labels = [ "" ] * len(ticks);
     i = 0;
     for tick in ticks:
-      labels[i] = time.strftime("%H:%M:%S", time.gmtime(tick/1000));
+      labels[i] = time.strftime("%H:%M:%S", time.gmtime(tick/1000 + self.timezone*3600));
       i = i + 1;
 
     return ( ticks, labels );
