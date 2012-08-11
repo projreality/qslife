@@ -168,9 +168,14 @@ class QSLife(wx.Frame):
       self.time_range = ( self.time_range[0] - gap/2, self.time_range[1] + gap/2 );
       self.update_graphs();
     # Move left
-    elif ((key_code == wx.WXK_NUMPAD_LEFT) or (key_code == wx.WXK_LEFT)):
+    elif ((key_code == wx.WXK_NUMPAD_LEFT) or (key_code == wx.WXK_NUMPAD4) or (key_code == wx.WXK_LEFT)):
       gap = self.time_range[1] - self.time_range[0];
       self.time_range = ( self.time_range[0] - gap/2, self.time_range[1] - gap/2 );
+      self.update_graphs();
+    # Move right
+    elif ((key_code == wx.WXK_NUMPAD_RIGHT) or (key_code == wx.WXK_NUMPAD6) or (key_code == wx.WXK_RIGHT)):
+      gap = self.time_range[1] - self.time_range[0];
+      self.time_range = ( self.time_range[0] + gap/2, self.time_range[1] + gap/2 );
       self.update_graphs();
     else:
       e.Skip();
