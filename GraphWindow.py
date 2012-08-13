@@ -22,14 +22,14 @@ class GraphWindow(matplotlib.backends.backend_wxagg.FigureCanvasWxAgg):
 
     self.Bind(wx.EVT_KEY_DOWN, self.onKeyDown);
 
-    self.time_range = ( 0, 0 ); # time range to display data
-    self.graph_config = [ ]; # List of data to graph
     self.clip = 1000;
-    self.timezone = 0;
-    self.num_visible_graphs = 6;
-    self.top_graph = 0;
     self.current_file = None;
+    self.graph_config = [ ]; # List of data to graph
+    self.num_visible_graphs = 0;
+    self.time_range = ( 0, 0 ); # time range to display data
+    self.timezone = 0;
     self.selected_graph = None;
+    self.top_graph = 0;
 
     self.mpl_connect("button_press_event", self.onClick);
 
@@ -73,6 +73,26 @@ class GraphWindow(matplotlib.backends.backend_wxagg.FigureCanvasWxAgg):
       self.graph_config.append(config);
     else:
       self.graph_config.insert(pos, config);
+
+################################################################################
+############################### GET/SET TOP GRAPH ##############################
+################################################################################
+  def get_top_graph(self):
+    return self.top_graph;
+
+  def set_top_graph(self, top_graph):
+    self.top_graph = top_graph;
+    return self;
+
+################################################################################
+########################## GET/SET NUM VISIBLE GRAPHS ##########################
+################################################################################
+  def get_num_visible_graphs(self):
+    return self.num_visible_graphs;
+
+  def set_num_visible_graphs(self, num_visible_graphs):
+    self.num_visible_graphs = num_visible_graphs;
+    return self;
 
 ################################################################################
 ############################## GET/SET CURRENT FILE ############################

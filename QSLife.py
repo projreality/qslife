@@ -100,8 +100,10 @@ class QSLife(wx.Frame):
     self.graphs.set_clip(temp["clip"]);
     self.graphs.set_current_file(self.current_file);
     self.graphs.set_graph_config(temp["graph_config"]);
+    self.graphs.set_num_visible_graphs(temp["num_visible_graphs"]);
     self.graphs.set_time_range(temp["time_range"]);
     self.graphs.set_timezone(temp["timezone"]);
+    self.graphs.set_top_graph(temp["top_graph"]);
     self.graphs.update();
     self.current_config = path;
 
