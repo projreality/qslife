@@ -120,6 +120,7 @@ class QSLife(wx.Frame):
       fd.write("time_range = " + repr(self.graphs.get_time_range()) + "\n");
       fd.write("timezone = " + repr(self.graphs.get_timezone()) + "\n");
       fd.close();
+      self.SetStatusText("Saved configuration file \"" + path + "\"");
     except IOError:
       wx.MessageBox("Error saving to file \"" + path + "\"!", "Error", wx.OK | wx.ICON_EXCLAMATION);
 
@@ -200,7 +201,6 @@ class QSLife(wx.Frame):
 	if (dialog.ShowModal() != wx.ID_YES):
 	  return;
       self.save_config(path);
-      self.SetStatusText("Saved configuration file \"" + path + "\"");
 
 ################################### FILE EXIT ##################################
   def onFileExit(self, e):

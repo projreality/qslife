@@ -29,6 +29,21 @@ class GraphWindow(matplotlib.backends.backend_wxagg.FigureCanvasWxAgg):
     self.num_visible_graphs = 6;
     self.top_graph = 0;
     self.current_file = None;
+    self.selected_graph = None;
+
+    self.mpl_connect("button_press_event", self.onClick);
+
+  def onClick(self, e):
+    ( max_x, max_y ) = self.GetSize();
+    x = e.x;
+    y = max_y - e.y;
+    top = 86; # Offset from top and bottom
+    bottom = 75;
+    sel = floor((y - top) / (max_y - top - bottom) * self.num_visible_graphs + self.top_graph);
+    if ((sel >= 0) and (sel < self.num_visible_graphs)):
+      self.selected_graph = sel;
+    else:
+      self.selected_graph = None;
 
 ################################################################################
 ############################### GET/SET TIME RANGE #############################
@@ -103,6 +118,8 @@ class GraphWindow(matplotlib.backends.backend_wxagg.FigureCanvasWxAgg):
     num = len(self.graph_config);
     fd = openFile(self.current_file, mode="r");
     for i in arange(self.top_graph, num):
+      if (i >= self.num_visible_graphs):
+        break;
       entry = self.graph_config[i];
       subplot = self.figure.add_subplot(self.num_visible_graphs, 1, i + 1 - self.top_graph);
       data = array([ [ data[entry[1]], data[entry[2]] ] for data in fd.getNode(entry[0]).where("(time > " + str(self.time_range[0]) + ") & (time < " + str(self.time_range[1]) + ")") ]);
