@@ -28,6 +28,7 @@ class GraphWindow(matplotlib.backends.backend_wxagg.FigureCanvasWxAgg):
     self.timezone = 0;
     self.num_visible_graphs = 6;
     self.top_graph = 0;
+    self.current_file = None;
 
 ################################################################################
 ################################# SET TIME RANGE ###############################
@@ -72,6 +73,9 @@ class GraphWindow(matplotlib.backends.backend_wxagg.FigureCanvasWxAgg):
 ################################# UPDATE GRAPHS ################################
 ################################################################################
   def update(self):
+    if (self.current_file == None):
+      return;
+
     self.figure.clear();
 
     ( ticks, labels ) = self.create_time_labels();

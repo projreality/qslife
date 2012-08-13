@@ -44,13 +44,13 @@ class QSLife(wx.Frame):
     # Structure
     menu_file = wx.Menu();
     menu_file_new = menu_file.AppendItem(wx.MenuItem(menu_file, wx.ID_NEW, "&New\tCtrl+N"));
-    menu_file_open = menu_file.AppendItem(wx.MenuItem(menu_file, wx.ID_OPEN, "&Open\tCtrl+O"));
+    menu_file_load = menu_file.AppendItem(wx.MenuItem(menu_file, wx.ID_ANY, "&Load HDFQS file\tCtrl+L"));
     menu_file_exit = menu_file.AppendItem(wx.MenuItem(menu_file, wx.ID_EXIT, "E&xit\tCtrl+Q"));
     menubar.Append(menu_file, "&File");
 
     # Events
     self.Bind(wx.EVT_MENU, self.onFileNew, menu_file_new);
-    self.Bind(wx.EVT_MENU, self.onFileOpen, menu_file_open);
+    self.Bind(wx.EVT_MENU, self.onFileLoad, menu_file_load);
     self.Bind(wx.EVT_MENU, self.onFileExit, menu_file_exit);
 
 ################################ FINISH MENUBAR ################################
@@ -67,12 +67,7 @@ class QSLife(wx.Frame):
 
     # Matplotlib
     self.graphs = GraphWindow(panel, wx.ID_ANY);
-    self.graphs.set_time_range(( 1333504000000, 1333505000000 ));
-    self.graph_config = [ [ "/Health/hr_nonin3150", "time", "value", ( 0, 200 ) ], [ "/Health/hr_nonin3150", "time", "value", ( 50, 160 ) ] ];
-    self.graphs.set_graphs(self.graph_config);
-    self.graphs.set_current_file(self.current_file);
     self.graphs.set_timezone(-7);
-    self.graphs.update();
 
     # Drag-and-drop
     dt = GraphDropTarget(self.graphs);
@@ -89,13 +84,15 @@ class QSLife(wx.Frame):
     self.Show();
 
 ################################################################################
-################################### OPEN FILE ##################################
+################################### LOAD FILE ##################################
 ################################################################################
-  def open_file(self, path):
+  def load_file(self, path):
     self.current_file = path;
     self.SetTitle(path);
 
     self.create_window();
+    self.graphs.set_current_file(self.current_file);
+    self.graphs.update();
 
     # Populate tree
     fd = openFile(path, mode="r");
@@ -114,24 +111,24 @@ class QSLife(wx.Frame):
 
 #################################### FILE NEW ##################################
   def onFileNew(self, e):
-    dialog = wx.FileDialog(None, "New HDFQS file ...", ".", style=wx.FD_SAVE);
+    dialog = wx.FileDialog(None, "New HDFQS file ...", ".", style=wx.FD_SAVE, wildcard="*.h5");
     if (dialog.ShowModal() == wx.ID_OK):
       path = dialog.GetPath();
       if (os.path.exists(path)):
 	dialog = wx.MessageDialog(None, "File \"" + path + "\" exists - overwrite?", "Confirm", wx.YES_NO);
 	if (dialog.ShowModal() == wx.ID_YES):
 	  init.init(path);
-	  self.open_file(path);
+	  self.load_file(path);
 	  self.statusbar.SetStatusText("Created new file \"" + path + "\"");
 
 ################################### FILE OPEN ##################################
-  def onFileOpen(self, e):
-    dialog = wx.FileDialog(None, "Open HDFQS file ...", ".", style=wx.FD_OPEN);
+  def onFileLoad(self, e):
+    dialog = wx.FileDialog(None, "Load HDFQS file ...", ".", style=wx.FD_OPEN, wildcard="*.h5");
     if (dialog.ShowModal() == wx.ID_OK):
       path = dialog.GetPath();
       if (os.path.exists(path)):
-	self.open_file(path);
-	self.SetStatusText("Opened file \"" + path + "\"");
+	self.load_file(path);
+	self.SetStatusText("Loaded file \"" + path + "\"");
       else:
 	wx.MessageBox("File \"" + path + "\" does not exist", "Error", wx.OK | wx.ICON_EXCLAMATION);
 
