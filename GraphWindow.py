@@ -23,7 +23,7 @@ class GraphWindow(matplotlib.backends.backend_wxagg.FigureCanvasWxAgg):
     self.Bind(wx.EVT_KEY_DOWN, self.onKeyDown);
 
     self.time_range = ( 0, 0 ); # time range to display data
-    self.graphs = [ ]; # List of data to graph
+    self.graph_config = [ ]; # List of data to graph
     self.clip = 1000;
     self.timezone = 0;
     self.num_visible_graphs = 6;
@@ -31,46 +31,66 @@ class GraphWindow(matplotlib.backends.backend_wxagg.FigureCanvasWxAgg):
     self.current_file = None;
 
 ################################################################################
-################################# SET TIME RANGE ###############################
+############################### GET/SET TIME RANGE #############################
 ################################################################################
+  def get_time_range(self):
+    return self.time_range;
+
   def set_time_range(self, time_range):
     self.time_range = time_range;
+    return self;
 
 ################################################################################
-################################### SET GRAPHS #################################
+############################## GET/SET GRAPH CONFIG ############################
 ################################################################################
-  def set_graphs(self, graphs):
-    self.graphs = graphs;
+  def get_graph_config(self):
+    return self.graph_config;
+
+  def set_graph_config(self, graph_config):
+    self.graph_config = graph_config;
+    return self;
 
 ################################################################################
 ################################# INSERT GRAPH ################################
 ################################################################################
   def add_graph(self, pos, config):
     if (pos == -1):
-      self.graphs.append(config);
+      self.graph_config.append(config);
     else:
-      self.graphs.insert(pos, config);
+      self.graph_config.insert(pos, config);
 
 ################################################################################
-################################ SET CURRENT FILE ##############################
+############################## GET/SET CURRENT FILE ############################
 ################################################################################
+  def get_current_file(self):
+    return self.current_file;
+
   def set_current_file(self, current_file):
     self.current_file = current_file;
+    return self;
 
 ################################################################################
-#################################### SET CLIP ##################################
+################################## GET/SET CLIP ################################
 ################################################################################
+  def get_clip(self):
+    return self.clip;
+
   def set_clip(self, clip):
     self.clip = clip;
+    return self;
 
 ################################################################################
-################################## SET TIMEZONE ################################
+################################ GET/SET TIMEZONE ##############################
 ################################################################################
+  def get_timezone(self):
+    return self.timezone;
+
   def set_timezone(self, timezone):
     self.timezone = timezone;
+    return self;
 
 ################################################################################
-################################# UPDATE GRAPHS ################################
+##################################### UPDATE ###################################
 ################################################################################
   def update(self):
     if (self.current_file == None):
@@ -80,10 +100,10 @@ class GraphWindow(matplotlib.backends.backend_wxagg.FigureCanvasWxAgg):
 
     ( ticks, labels ) = self.create_time_labels();
 
-    num = len(self.graphs);
+    num = len(self.graph_config);
     fd = openFile(self.current_file, mode="r");
     for i in arange(self.top_graph, num):
-      entry = self.graphs[i];
+      entry = self.graph_config[i];
       subplot = self.figure.add_subplot(self.num_visible_graphs, 1, i + 1 - self.top_graph);
       data = array([ [ data[entry[1]], data[entry[2]] ] for data in fd.getNode(entry[0]).where("(time > " + str(self.time_range[0]) + ") & (time < " + str(self.time_range[1]) + ")") ]);
       if (len(data) != 0):
@@ -131,7 +151,7 @@ class GraphWindow(matplotlib.backends.backend_wxagg.FigureCanvasWxAgg):
 	self.top_graph = self.top_graph - 1;
 	self.update();
     elif ((key_code == wx.WXK_NUMPAD_DOWN) or (key_code == wx.WXK_NUMPAD2) or (key_code == wx.WXK_DOWN)):
-      if (self.top_graph < len(self.graphs) - 1):
+      if (self.top_graph < len(self.graph_config) - 1):
 	self.top_graph = self.top_graph + 1;
 	self.update();
     else:

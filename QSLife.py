@@ -25,6 +25,7 @@ class QSLife(wx.Frame):
     super(QSLife, self).__init__(*args, **kwargs);
 
     # HDFQS
+    self.current_config = None;
     self.current_file = None;
     self.time_range = ( 0, 0 );
     self.graph_config = [ ];
@@ -44,8 +45,10 @@ class QSLife(wx.Frame):
     # Structure
     menu_file = wx.Menu();
     menu_file_new = menu_file.AppendItem(wx.MenuItem(menu_file, wx.ID_NEW, "&New\tCtrl+N"));
-    menu_file_open = menu_file.AppendItem(wx.MenuItem(menu_file, wx.ID_OPEN, "&Open\tCtrl+O"));
+    menu_file_open = menu_file.AppendItem(wx.MenuItem(menu_file, wx.ID_OPEN, "&Open config\tCtrl+O"));
     menu_file_load = menu_file.AppendItem(wx.MenuItem(menu_file, wx.ID_ANY, "&Load HDFQS file\tCtrl+L"));
+    menu_file_save = menu_file.AppendItem(wx.MenuItem(menu_file, wx.ID_SAVE, "&Save config\tCtrl+S"));
+    menu_file_save_as = menu_file.AppendItem(wx.MenuItem(menu_file, wx.ID_SAVEAS, "Save &As\tCtrl+A"));
     menu_file_exit = menu_file.AppendItem(wx.MenuItem(menu_file, wx.ID_EXIT, "E&xit\tCtrl+Q"));
     menubar.Append(menu_file, "&File");
 
@@ -53,6 +56,8 @@ class QSLife(wx.Frame):
     self.Bind(wx.EVT_MENU, self.onFileNew, menu_file_new);
     self.Bind(wx.EVT_MENU, self.onFileOpen, menu_file_open);
     self.Bind(wx.EVT_MENU, self.onFileLoad, menu_file_load);
+    self.Bind(wx.EVT_MENU, self.onFileSave, menu_file_save);
+    self.Bind(wx.EVT_MENU, self.onFileSaveAs, menu_file_save_as);
     self.Bind(wx.EVT_MENU, self.onFileExit, menu_file_exit);
 
 ################################ FINISH MENUBAR ################################
@@ -67,9 +72,8 @@ class QSLife(wx.Frame):
     panel = wx.Panel(self.window, style=wx.NO_FULL_REPAINT_ON_RESIZE);
     self.window.SplitVertically(self.tree, panel, 300);
 
-    # Matplotlib
+    # GraphWindow
     self.graphs = GraphWindow(panel, wx.ID_ANY);
-    self.graphs.set_timezone(-7);
 
     # Drag-and-drop
     dt = GraphDropTarget(self.graphs);
@@ -89,16 +93,35 @@ class QSLife(wx.Frame):
 ################################## OPEN CONFIG #################################
 ################################################################################
   def open_config(self, path):
-
     temp = { };
     execfile(path, temp);
     self.current_file = temp["current_file"];
     self.load_file(self.current_file);
+    self.graphs.set_clip(temp["clip"]);
     self.graphs.set_current_file(self.current_file);
+    self.graphs.set_graph_config(temp["graph_config"]);
     self.graphs.set_time_range(temp["time_range"]);
-    self.graphs.set_graphs(temp["graph_config"]);
+    self.graphs.set_timezone(temp["timezone"]);
     self.graphs.update();
+    self.current_config = path;
 
+################################################################################
+################################## SAVE CONFIG #################################
+################################################################################
+  def save_config(self, path=None):
+    if (path == None):
+      path = self.current_config;
+
+    try:
+      fd = open(path, "w");
+      fd.write("clip = " + repr(self.graphs.get_clip()) + "\n");
+      fd.write("current_file = " + repr(self.graphs.get_current_file()) + "\n");
+      fd.write("graph_config = " + repr(self.graphs.get_graph_config()) + "\n");
+      fd.write("time_range = " + repr(self.graphs.get_time_range()) + "\n");
+      fd.write("timezone = " + repr(self.graphs.get_timezone()) + "\n");
+      fd.close();
+    except IOError:
+      wx.MessageBox("Error saving to file \"" + path + "\"!", "Error", wx.OK | wx.ICON_EXCLAMATION);
 
 ################################################################################
 ################################### LOAD FILE ##################################
@@ -109,7 +132,6 @@ class QSLife(wx.Frame):
 
     self.create_window();
     self.graphs.set_current_file(self.current_file);
-    self.graphs.update();
 
     # Populate tree
     fd = openFile(path, mode="r");
@@ -149,16 +171,36 @@ class QSLife(wx.Frame):
       else:
 	wx.MessageBox("File \"" + path + "\" does not exist", "Error", wx.OK | wx.ICON_EXCLAMATION);
 
-################################### FILE OPEN ##################################
+################################### FILE LOAD ##################################
   def onFileLoad(self, e):
     dialog = wx.FileDialog(None, "Load HDFQS file ...", ".", style=wx.FD_OPEN, wildcard="*.h5");
     if (dialog.ShowModal() == wx.ID_OK):
       path = dialog.GetPath();
       if (os.path.exists(path)):
 	self.load_file(path);
+	self.graphs.update();
 	self.SetStatusText("Loaded file \"" + path + "\"");
       else:
 	wx.MessageBox("File \"" + path + "\" does not exist", "Error", wx.OK | wx.ICON_EXCLAMATION);
+
+################################## FILE SAVE ###################################
+  def onFileSave(self, e):
+    if (self.current_config != None):
+      self.save_config();
+    else:
+      self.onFileSaveAs(e);
+
+################################# FILE SAVE AS #################################
+  def onFileSaveAs(self, e):
+    dialog = wx.FileDialog(None, "Save configuration file ...", "Save", style=wx.FD_SAVE, wildcard="*.py");
+    if (dialog.ShowModal() == wx.ID_OK):
+      path = dialog.GetPath();
+      if (os.path.exists(path)):
+	dialog = wx.MessageDialog(None, "File \"" + path + "\" exists. Overwrite?", "Confirm", wx.YES_NO | wx.ICON_EXCLAMATION);
+	if (dialog.ShowModal() != wx.ID_YES):
+	  return;
+      self.save_config(path);
+      self.SetStatusText("Saved configuration file \"" + path + "\"");
 
 ################################### FILE EXIT ##################################
   def onFileExit(self, e):
