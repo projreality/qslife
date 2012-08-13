@@ -1,6 +1,7 @@
 from math import *;
 import matplotlib;
 from numpy import *;
+import re;
 from tables import *;
 import time;
 import wx;
@@ -85,7 +86,8 @@ class GraphWindow(matplotlib.backends.backend_wxagg.FigureCanvasWxAgg):
 	subplot.plot(data[:,0], data[:,1]);
       else:
 	subplot.get_axes().set_xlim(self.time_range);
-      subplot.set_ylabel(entry[0]);
+      result = re.search("^/([A-Za-z0-9]+)/([A-Za-z0-9]+)_([A-Za-z0-9]+)$", entry[0]).groups();
+      subplot.set_ylabel(result[1] + "\n" + result[2]);
       ax = subplot.get_axes();
       ax.set_xticks(ticks);
       ax.set_xticklabels(labels);
