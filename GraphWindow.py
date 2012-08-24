@@ -33,6 +33,9 @@ class GraphWindow(matplotlib.backends.backend_wxagg.FigureCanvasWxAgg):
 
     self.mpl_connect("button_press_event", self.onClick);
 
+################################################################################
+################################### ON CLICK ###################################
+################################################################################
   def onClick(self, e):
     ( max_x, max_y ) = self.GetSize();
     x = e.x;
@@ -191,6 +194,11 @@ class GraphWindow(matplotlib.backends.backend_wxagg.FigureCanvasWxAgg):
       if (self.top_graph < len(self.graph_config) - 1):
 	self.top_graph = self.top_graph + 1;
 	self.update();
+    elif (key_code == wx.WXK_SPACE):
+      dialog = GraphOptionsDialog(None, title="Graph Options");
+      dialog.ShowModal();
+      dialog.destroy();
+      print "OK";
     else:
       e.Skip();
 
@@ -250,7 +258,7 @@ class GraphWindow(matplotlib.backends.backend_wxagg.FigureCanvasWxAgg):
     return ( ticks, labels );
 
 ################################################################################
-############################### GRAPH DROP TARGET  #############################
+############################### GRAPH DROP TARGET ##############################
 ################################################################################
 class GraphDropTarget(wx.TextDropTarget):
 
@@ -262,3 +270,17 @@ class GraphDropTarget(wx.TextDropTarget):
     config = [ data, "time", "value", ( 50, 150 ) ];
     self.object.add_graph(-1, config);
     self.object.update();
+
+################################################################################
+################################## GRAPH DIALOG ################################
+################################################################################
+class GraphOptionsDialog(wx.Dialog):
+
+  def __init__(self, *args, **kwargs):
+    super(GraphOptionsDialog, self).__init__(*args, **kwargs);
+
+    panel = wx.Panel(self);
+    sizer = wx.BoxSizer(wx.VERTICAL);
+
+    self.SetSize(( 250, 200 ));
+
