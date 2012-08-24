@@ -194,7 +194,7 @@ class GraphWindow(matplotlib.backends.backend_wxagg.FigureCanvasWxAgg):
       if (self.top_graph < len(self.graph_config) - 1):
 	self.top_graph = self.top_graph + 1;
 	self.update();
-    elif (key_code == wx.WXK_SPACE):
+    elif (key_code == wx.WXK_NUMPAD_ENTER):
       dialog = GraphOptionsDialog(None, title="Graph Options");
       dialog.ShowModal();
       dialog.destroy();
