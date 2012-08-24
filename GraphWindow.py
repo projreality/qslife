@@ -25,6 +25,7 @@ class GraphWindow(matplotlib.backends.backend_wxagg.FigureCanvasWxAgg):
 
     self.clip = 1000;
     self.current_file = None;
+    self.data = None;
     self.graph_config = [ ]; # List of data to graph
     self.num_visible_graphs = 0;
     self.time_range = ( 0, 0 ); # time range to display data
@@ -129,6 +130,17 @@ class GraphWindow(matplotlib.backends.backend_wxagg.FigureCanvasWxAgg):
     return self;
 
 ################################################################################
+################################## LOAD DATA ###################################
+################################################################################
+  def load_data(self):
+    self.data = [ ];
+    fd = openFile(self.current_file, mode="r");
+    for i in arange(len(self.graph_config)):
+      entry = self.graph_config[i];
+      self.data.append(array([ [ data[entry[1]], data[entry[2]] ] for data in fd.getNode(entry[0]).where("(time > " + str(self.time_range[0]) + ") & (time < " + str(self.time_range[1]) + ")") ]));
+    fd.close();
+
+################################################################################
 ##################################### UPDATE ###################################
 ################################################################################
   def update(self):
@@ -139,25 +151,25 @@ class GraphWindow(matplotlib.backends.backend_wxagg.FigureCanvasWxAgg):
 
     ( ticks, labels ) = self.create_time_labels();
 
+    if (self.data == None):
+      self.load_data();
     num = len(self.graph_config);
-    fd = openFile(self.current_file, mode="r");
     for i in arange(self.top_graph, num):
       if (i >= self.num_visible_graphs):
         break;
-      entry = self.graph_config[i];
       subplot = self.figure.add_subplot(self.num_visible_graphs, 1, i + 1 - self.top_graph);
-      data = array([ [ data[entry[1]], data[entry[2]] ] for data in fd.getNode(entry[0]).where("(time > " + str(self.time_range[0]) + ") & (time < " + str(self.time_range[1]) + ")") ]);
+      data = self.data[i];
       if (len(data) != 0):
 	subplot.plot(data[:,0], data[:,1]);
       else:
 	subplot.get_axes().set_xlim(self.time_range);
+      entry = self.graph_config[i];
       result = re.search("^/([A-Za-z0-9]+)/([A-Za-z0-9]+)_([A-Za-z0-9]+)$", entry[0]).groups();
       subplot.set_ylabel(result[1] + "\n" + result[2]);
       ax = subplot.get_axes();
       ax.set_xticks(ticks);
       ax.set_xticklabels(labels);
       ax.set_ylim(entry[3]);
-    fd.close();
 
     self.draw();
 
@@ -171,21 +183,25 @@ class GraphWindow(matplotlib.backends.backend_wxagg.FigureCanvasWxAgg):
     if (key_code == wx.WXK_NUMPAD_ADD):
       gap = self.time_range[1] - self.time_range[0];
       self.time_range = ( self.time_range[0] + gap/4, self.time_range[1] - gap/4 );
+      self.load_data();
       self.update();
     # Zoom out
     elif (key_code == wx.WXK_NUMPAD_SUBTRACT):
       gap = self.time_range[1] - self.time_range[0];
       self.time_range = ( self.time_range[0] - gap/2, self.time_range[1] + gap/2 );
+      self.load_data();
       self.update();
     # Move left
     elif ((key_code == wx.WXK_NUMPAD_LEFT) or (key_code == wx.WXK_NUMPAD4) or (key_code == wx.WXK_LEFT)):
       gap = self.time_range[1] - self.time_range[0];
       self.time_range = ( self.time_range[0] - gap/2, self.time_range[1] - gap/2 );
+      self.load_data();
       self.update();
     # Move right
     elif ((key_code == wx.WXK_NUMPAD_RIGHT) or (key_code == wx.WXK_NUMPAD6) or (key_code == wx.WXK_RIGHT)):
       gap = self.time_range[1] - self.time_range[0];
       self.time_range = ( self.time_range[0] + gap/2, self.time_range[1] + gap/2 );
+      self.load_data();
       self.update();
     elif ((key_code == wx.WXK_NUMPAD_UP) or (key_code == wx.WXK_NUMPAD8) or (key_code == wx.WXK_UP)):
       if (self.top_graph > 0):
@@ -220,9 +236,7 @@ class GraphWindow(matplotlib.backends.backend_wxagg.FigureCanvasWxAgg):
     # Autoscale Y
     elif (key_code == 65):
       entry = self.graph_config[self.selected_graph];
-      fd = openFile(self.current_file, mode="r");
-      data = array([ [ data[entry[1]], data[entry[2]] ] for data in fd.getNode(entry[0]).where("(time > " + str(self.time_range[0]) + ") & (time < " + str(self.time_range[1]) + ")") ]);
-      fd.close();
+      data = self.data[self.selected_graph];
       if (len(data) != 0):
 	y_min = data[:,1].min();
 	y_max = data[:,1].max();
