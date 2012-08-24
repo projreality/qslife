@@ -203,6 +203,7 @@ class GraphWindow(matplotlib.backends.backend_wxagg.FigureCanvasWxAgg):
 	dialog = wx.MessageDialog(None, "Are you sure you want to remove the graph?", "Confirm delete graph", wx.YES_NO | wx.NO_DEFAULT | wx.ICON_EXCLAMATION);
 	if (dialog.ShowModal() == wx.ID_YES):
 	  self.graph_config.pop(self.selected_graph);
+	  self.update();
     else:
       e.Skip();
 
