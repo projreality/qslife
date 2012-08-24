@@ -22,6 +22,7 @@ class GraphWindow(matplotlib.backends.backend_wxagg.FigureCanvasWxAgg):
     self.figure.set_size_inches(float(size[0])/self.figure.get_dpi(), float(size[1])/self.figure.get_dpi());
 
     self.Bind(wx.EVT_KEY_DOWN, self.onKeyDown);
+    self.Bind(wx.EVT_MOUSEWHEEL, self.onMouseWheel);
 
     self.clip = 1000;
     self.current_file = None;
@@ -50,6 +51,28 @@ class GraphWindow(matplotlib.backends.backend_wxagg.FigureCanvasWxAgg):
     else:
       self.selected_graph = None;
 
+################################################################################
+################################ ON MOUSE WHEEL ################################
+################################################################################
+  def onMouseWheel(self, e):
+    rot = e.GetWheelRotation();
+    if ((self.selected_graph == None) or (rot == 0)):
+      return;
+
+    y_min = self.graph_config[self.selected_graph][3][0];
+    y_max = self.graph_config[self.selected_graph][3][1];
+    y_range = y_max - y_min;
+
+    if (rot > 0):
+      y_min = y_min + y_range / 5;
+      y_max = y_max - y_range / 5;
+    else:
+      y_min = y_min - y_range / 4;
+      y_max = y_max + y_range / 4;
+
+    self.graph_config[self.selected_graph][3] = ( y_min, y_max );
+    self.update();
+    print ( y_min, y_max );
 ################################################################################
 ############################### GET/SET TIME RANGE #############################
 ################################################################################
@@ -235,16 +258,17 @@ class GraphWindow(matplotlib.backends.backend_wxagg.FigureCanvasWxAgg):
       dialog.Destroy();
     # Autoscale Y
     elif (key_code == 65):
-      entry = self.graph_config[self.selected_graph];
-      data = self.data[self.selected_graph];
-      if (len(data) != 0):
-	y_min = data[:,1].min();
-	y_max = data[:,1].max();
-	y_range = y_max - y_min;
-	y_min = floor(y_min - y_range * 0.15);
-	y_max = floor(y_max + y_range * 0.15);
-	self.graph_config[self.selected_graph][3] = ( y_min, y_max );
-	self.update();
+      if (self.selected_graph != None):
+        entry = self.graph_config[self.selected_graph];
+        data = self.data[self.selected_graph];
+        if (len(data) != 0):
+	  y_min = data[:,1].min();
+	  y_max = data[:,1].max();
+	  y_range = y_max - y_min;
+	  y_min = floor(y_min - y_range * 0.15);
+	  y_max = floor(y_max + y_range * 0.15);
+	  self.graph_config[self.selected_graph][3] = ( y_min, y_max );
+	  self.update();
     else:
       e.Skip();
 
