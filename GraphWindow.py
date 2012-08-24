@@ -4,6 +4,7 @@ import matplotlib;
 from numpy import *;
 import re;
 from tables import *;
+import threading;
 import time;
 import wx;
 
@@ -35,6 +36,13 @@ class GraphWindow(matplotlib.backends.backend_wxagg.FigureCanvasWxAgg):
     self.top_graph = 0;
 
     self.mpl_connect("button_press_event", self.onClick);
+
+    self.condition_data_load = threading.Condition();
+    self.condition_update = threading.Condition();
+
+    update_thread = threading.Thread(target=self.loop_update);
+    update_thread.daemon = True;
+    update_thread.start();
 
 ################################################################################
 ################################### ON CLICK ###################################
@@ -156,27 +164,30 @@ class GraphWindow(matplotlib.backends.backend_wxagg.FigureCanvasWxAgg):
 ################################## LOAD DATA ###################################
 ################################################################################
   def load_data(self):
-    load = False;
-    gap = self.time_range[1] - self.time_range[0];
-    if (self.data == None):
-      load = True;
-    elif (len(self.graph_config) == 0):
+    with self.condition_update:
       load = False;
-    else:
-      t = self.data[0][:,0];
-      t_min = t.min();
-      t_max = t.max();
-      if ((t_min > self.time_range[0] - gap/2) or (t_max < self.time_range[1] + gap/2)):
-	load = True;
+      gap = self.time_range[1] - self.time_range[0];
+      if (self.data == None):
+        load = True;
+      elif (len(self.graph_config) == 0):
+        load = False;
       else:
-	load = False;
-    if (load):
-      self.data = [ ];
-      fd = openFile(self.current_file, mode="r");
-      for i in arange(len(self.graph_config)):
-        entry = self.graph_config[i];
-        self.data.append(array([ [ data[entry[1]], data[entry[2]] ] for data in fd.getNode(entry[0]).where("(time >= " + str(self.time_range[0] - gap/2) + ") & (time <= " + str(self.time_range[1] + gap/2) + ")") ]));
-      fd.close();
+        t = self.data[0][:,0];
+        t_min = t.min();
+        t_max = t.max();
+        if ((t_min > self.time_range[0] - gap/2) or (t_max < self.time_range[1] + gap/2)):
+	  load = True;
+        else:
+	  load = False;
+      if (load):
+        self.data = [ ];
+        fd = openFile(self.current_file, mode="r");
+        for i in arange(len(self.graph_config)):
+          entry = self.graph_config[i];
+          self.data.append(array([ [ data[entry[1]], data[entry[2]] ] for data in fd.getNode(entry[0]).where("(time >= " + str(self.time_range[0] - gap/2) + ") & (time <= " + str(self.time_range[1] + gap/2) + ")") ]));
+        fd.close();
+
+	self.condition_update.notify();
 
 ################################################################################
 ##################################### UPDATE ###################################
@@ -279,16 +290,17 @@ class GraphWindow(matplotlib.backends.backend_wxagg.FigureCanvasWxAgg):
       elif (len(self.data[self.selected_graph]) == 0):
 	return;
       else:
-        entry = self.graph_config[self.selected_graph];
-        t = self.data[self.selected_graph][:,0];
-        data = self.data[self.selected_graph][:,1];
-	y_min = data.min();
-	y_max = data.max();
-	y_range = y_max - y_min;
-	y_min = floor(y_min - y_range * 0.15);
-	y_max = floor(y_max + y_range * 0.15);
-	self.graph_config[self.selected_graph][3] = ( y_min, y_max );
-	self.update();
+	with self.condition_update:
+	  entry = self.graph_config[self.selected_graph];
+	  t = self.data[self.selected_graph][:,0];
+	  data = self.data[self.selected_graph][:,1];
+	  y_min = data.min();
+	  y_max = data.max();
+	  y_range = y_max - y_min;
+	  y_min = floor(y_min - y_range * 0.15);
+	  y_max = floor(y_max + y_range * 0.15);
+	  self.graph_config[self.selected_graph][3] = ( y_min, y_max );
+	  self.condition_update.notify();
     else:
       e.Skip();
 
@@ -346,6 +358,16 @@ class GraphWindow(matplotlib.backends.backend_wxagg.FigureCanvasWxAgg):
       i = i + 1;
 
     return ( ticks, labels );
+
+################################################################################
+################################# LOOP UPDATE ##################################
+################################################################################
+  def loop_update(self):
+    while True:
+      with self.condition_update:
+	while True:
+	  self.condition_update.wait();
+	  self.update();
 
 ################################################################################
 ############################### GRAPH DROP TARGET ##############################
