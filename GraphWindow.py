@@ -42,7 +42,7 @@ class GraphWindow(matplotlib.backends.backend_wxagg.FigureCanvasWxAgg):
     y = max_y - e.y;
     top = 86; # Offset from top and bottom
     bottom = 75;
-    sel = floor((y - top) / (max_y - top - bottom) * self.num_visible_graphs + self.top_graph);
+    sel = int(floor((y - top) / (max_y - top - bottom) * self.num_visible_graphs + self.top_graph));
     if ((sel >= 0) and (sel < self.num_visible_graphs)):
       self.selected_graph = sel;
     else:
@@ -198,7 +198,11 @@ class GraphWindow(matplotlib.backends.backend_wxagg.FigureCanvasWxAgg):
       dialog = GraphOptionsDialog(None, title="Graph Options");
       dialog.ShowModal();
       dialog.destroy();
-      print "OK";
+    elif (key_code == wx.WXK_DELETE):
+      if (self.selected_graph != None):
+	dialog = wx.MessageDialog(None, "Are you sure you want to remove the graph?", "Confirm delete graph", wx.YES_NO | wx.NO_DEFAULT | wx.ICON_EXCLAMATION);
+	if (dialog.ShowModal() == wx.ID_YES):
+	  self.graph_config.pop(self.selected_graph);
     else:
       e.Skip();
 
