@@ -91,8 +91,9 @@ class GraphWindow(matplotlib.backends.backend_wxagg.FigureCanvasWxAgg):
       y_max = y_max + y_range / 4;
 
     self.graph_config[self.selected_graph][3] = ( y_min, y_max );
-    self.update();
-    print ( y_min, y_max );
+    with self.condition_update:
+      self.condition_update.notify();
+
 ################################################################################
 ############################### GET/SET TIME RANGE #############################
 ################################################################################
@@ -250,29 +251,33 @@ class GraphWindow(matplotlib.backends.backend_wxagg.FigureCanvasWxAgg):
 
     # Zoom in
     if (key_code == wx.WXK_NUMPAD_ADD):
+      gap = self.time_range[1] - self.time_range[0];
+      self.time_range = ( self.time_range[0] + gap/4, self.time_range[1] - gap/4 );
       with self.condition_update:
-	gap = self.time_range[1] - self.time_range[0];
-	self.time_range = ( self.time_range[0] + gap/4, self.time_range[1] - gap/4 );
 	self.condition_update.notify();
     # Zoom out
     elif (key_code == wx.WXK_NUMPAD_SUBTRACT):
       gap = self.time_range[1] - self.time_range[0];
       self.time_range = ( self.time_range[0] - gap/2, self.time_range[1] + gap/2 );
-      self.update();
+      with self.condition_update:
+	self.condition_update.notify();
     # Move left
     elif ((key_code == wx.WXK_NUMPAD_LEFT) or (key_code == wx.WXK_NUMPAD4) or (key_code == wx.WXK_LEFT)):
       gap = self.time_range[1] - self.time_range[0];
       self.time_range = ( self.time_range[0] - gap/2, self.time_range[1] - gap/2 );
-      self.update();
+      with self.condition_update:
+	self.condition_update.notify();
     # Move right
     elif ((key_code == wx.WXK_NUMPAD_RIGHT) or (key_code == wx.WXK_NUMPAD6) or (key_code == wx.WXK_RIGHT)):
       gap = self.time_range[1] - self.time_range[0];
       self.time_range = ( self.time_range[0] + gap/2, self.time_range[1] + gap/2 );
-      self.update();
+      with self.condition_update:
+	self.condition_update.notify();
     elif ((key_code == wx.WXK_NUMPAD_UP) or (key_code == wx.WXK_NUMPAD8) or (key_code == wx.WXK_UP)):
       if (self.top_graph > 0):
 	self.top_graph = self.top_graph - 1;
-	self.update();
+	with self.condition_update:
+	  self.condition_update.notify();
     elif ((key_code == wx.WXK_NUMPAD_DOWN) or (key_code == wx.WXK_NUMPAD2) or (key_code == wx.WXK_DOWN)):
       if (self.top_graph < len(self.graph_config) - 1):
 	self.top_graph = self.top_graph + 1;
