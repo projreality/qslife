@@ -204,6 +204,10 @@ class GraphWindow(matplotlib.backends.backend_wxagg.FigureCanvasWxAgg):
 	if (dialog.ShowModal() == wx.ID_YES):
 	  self.graph_config.pop(self.selected_graph);
 	  self.update();
+    elif (key_code == wx.WXK_SPACE):
+      dialog = GoToTimeDialog(None, title="Go to ...");
+      dialog.ShowModal();
+      dialog.destroy();
     else:
       e.Skip();
 
@@ -289,3 +293,29 @@ class GraphOptionsDialog(wx.Dialog):
 
     self.SetSize(( 250, 200 ));
 
+################################################################################
+############################## GO TO TIME DIALOG ###############################
+################################################################################
+class GoToTimeDialog(wx.Dialog):
+
+  def __init__(self, *args, **kwargs):
+    super(GoToTimeDialog, self).__init__(*args, **kwargs);
+
+    panel = wx.Panel(self);
+    box = wx.StaticBox(panel, label="Go to");
+    sizer = wx.StaticBoxSizer(box, wx.HORIZONTAL);
+    self.text_field = wx.TextCtrl(panel, size=( 190, -1 ));
+    sizer.Add(self.text_field);
+    panel.SetSizer(sizer);
+
+    self.SetSize(( 200, 55 ));
+    self.text_field.Bind(wx.EVT_KEY_DOWN, self.onKeyDown);
+
+    self.text_field.SetFocus();
+
+  def onKeyDown(self, e):
+    key_code = e.GetKeyCode();
+    if (key_code == wx.WXK_ESCAPE):
+      self.Destroy();
+    if ((key_code == wx.WXK_ENTER) or (key_code == wx.WXK_NUMPAD_ENTER)):
+      pass;
