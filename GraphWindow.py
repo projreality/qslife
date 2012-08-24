@@ -37,6 +37,8 @@ class GraphWindow(matplotlib.backends.backend_wxagg.FigureCanvasWxAgg):
 
     self.mpl_connect("button_press_event", self.onClick);
 
+    self.lock_data = threading.Lock();
+
     self.condition_data_load = threading.Condition();
     self.condition_update = threading.Condition();
 
@@ -182,7 +184,8 @@ class GraphWindow(matplotlib.backends.backend_wxagg.FigureCanvasWxAgg):
       elif (len(self.graph_config) == 0):
         load = False;
       else:
-        t = self.data[0][:,0];
+        with self.lock_data:
+          t = self.data[0][:,0];
         t_min = t.min();
         t_max = t.max();
         if ((t_min > self.time_range[0] - gap/2) or (t_max < self.time_range[1] + gap/2)):
@@ -190,12 +193,15 @@ class GraphWindow(matplotlib.backends.backend_wxagg.FigureCanvasWxAgg):
         else:
 	  load = False;
       if (load):
-        self.data = [ ];
+        temp_data = [ ];
         fd = openFile(self.current_file, mode="r");
         for i in arange(len(self.graph_config)):
           entry = self.graph_config[i];
-          self.data.append(array([ [ data[entry[1]], data[entry[2]] ] for data in fd.getNode(entry[0]).where("(time >= " + str(self.time_range[0] - gap/2) + ") & (time <= " + str(self.time_range[1] + gap/2) + ")") ]));
+          temp_data.append(array([ [ data[entry[1]], data[entry[2]] ] for data in fd.getNode(entry[0]).where("(time >= " + str(self.time_range[0] - gap/2) + ") & (time <= " + str(self.time_range[1] + gap/2) + ")") ]));
         fd.close();
+
+	with self.lock_data:
+	  self.data = temp_data;
 
 	self.condition_update.notify();
 
@@ -211,17 +217,19 @@ class GraphWindow(matplotlib.backends.backend_wxagg.FigureCanvasWxAgg):
     ( ticks, labels ) = self.create_time_labels();
 
     num = len(self.graph_config);
+    with self.lock_data:
+      data = self.data;
     for i in arange(self.top_graph, num):
       if (i >= self.num_visible_graphs):
         break;
       subplot = self.figure.add_subplot(self.num_visible_graphs, 1, i + 1 - self.top_graph);
-      t = self.data[i][:,0];
-      data = self.data[i][:,1];
+      t = data[i][:,0];
+      val = data[i][:,1];
       disp = (t >= self.time_range[0]) & (t <= self.time_range[1]);
       t = t[disp];
-      data = data[disp];
-      if (len(data) != 0):
-	subplot.plot(t, data);
+      val = val[disp];
+      if (len(val) != 0):
+	subplot.plot(t, val);
       else:
 	subplot.get_axes().set_xlim(self.time_range);
       entry = self.graph_config[i];
@@ -277,8 +285,12 @@ class GraphWindow(matplotlib.backends.backend_wxagg.FigureCanvasWxAgg):
       if (self.selected_graph != None):
 	dialog = wx.MessageDialog(None, "Are you sure you want to remove the graph?", "Confirm delete graph", wx.YES_NO | wx.NO_DEFAULT | wx.ICON_EXCLAMATION);
 	if (dialog.ShowModal() == wx.ID_YES):
-	  self.graph_config.pop(self.selected_graph);
-	  self.update();
+	  with self.lock_data:
+	    with self.condition_update:
+	      self.graph_config.pop(self.selected_graph);
+	      self.data.pop(self.selected_graph);
+	      self.selected_graph = None;
+	      self.condition_update.notify();
     elif (key_code == wx.WXK_SPACE):
       dialog = GoToTimeDialog(self, None, title="Go to ...");
       result = dialog.ShowModal();
@@ -294,15 +306,17 @@ class GraphWindow(matplotlib.backends.backend_wxagg.FigureCanvasWxAgg):
       dialog.Destroy();
     # Autoscale Y
     elif (key_code == 65):
+      with self.lock_data:
+	temp_data = self.data;
       if (self.selected_graph == None):
 	return;
-      elif (len(self.data[self.selected_graph]) == 0):
+      elif (len(temp_data[self.selected_graph]) == 0):
 	return;
       else:
 	with self.condition_update:
 	  entry = self.graph_config[self.selected_graph];
-	  t = self.data[self.selected_graph][:,0];
-	  data = self.data[self.selected_graph][:,1];
+	  t = temp_data[self.selected_graph][:,0];
+	  data = temp_data[self.selected_graph][:,1];
 	  y_min = data.min();
 	  y_max = data.max();
 	  y_range = y_max - y_min;
