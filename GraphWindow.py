@@ -181,9 +181,13 @@ class GraphWindow(matplotlib.backends.backend_wxagg.FigureCanvasWxAgg):
       if (i >= self.num_visible_graphs):
         break;
       subplot = self.figure.add_subplot(self.num_visible_graphs, 1, i + 1 - self.top_graph);
-      data = self.data[i];
+      t = self.data[i][:,0];
+      data = self.data[i][:,1];
+      disp = (t >= self.time_range[0]) & (t <= self.time_range[1]);
+      t = t[disp];
+      data = data[disp];
       if (len(data) != 0):
-	subplot.plot(data[:,0], data[:,1]);
+	subplot.plot(t, data);
       else:
 	subplot.get_axes().set_xlim(self.time_range);
       entry = self.graph_config[i];
