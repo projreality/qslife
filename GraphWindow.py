@@ -40,9 +40,19 @@ class GraphWindow(matplotlib.backends.backend_wxagg.FigureCanvasWxAgg):
     self.condition_data_load = threading.Condition();
     self.condition_update = threading.Condition();
 
+    self.EVTTYPE_UPDATE = wx.NewEventType();
+    self.EVT_UPDATE = wx.PyEventBinder(self.EVTTYPE_UPDATE, 1);
+    self.Bind(self.EVT_UPDATE, self.onUpdate);
+
     update_thread = threading.Thread(target=self.loop_update);
     update_thread.daemon = True;
     update_thread.start();
+
+################################################################################
+################################### ON UPDATE ##################################
+################################################################################
+  def onUpdate(self, e):
+    self.update();
 
 ################################################################################
 ################################### ON CLICK ###################################
@@ -224,8 +234,6 @@ class GraphWindow(matplotlib.backends.backend_wxagg.FigureCanvasWxAgg):
 
     self.draw();
 
-    self.load_data();
-
 ################################################################################
 #################################### KEY DOWN ##################################
 ################################################################################
@@ -234,9 +242,10 @@ class GraphWindow(matplotlib.backends.backend_wxagg.FigureCanvasWxAgg):
 
     # Zoom in
     if (key_code == wx.WXK_NUMPAD_ADD):
-      gap = self.time_range[1] - self.time_range[0];
-      self.time_range = ( self.time_range[0] + gap/4, self.time_range[1] - gap/4 );
-      self.update();
+      with self.condition_update:
+	gap = self.time_range[1] - self.time_range[0];
+	self.time_range = ( self.time_range[0] + gap/4, self.time_range[1] - gap/4 );
+	self.condition_update.notify();
     # Zoom out
     elif (key_code == wx.WXK_NUMPAD_SUBTRACT):
       gap = self.time_range[1] - self.time_range[0];
@@ -367,7 +376,8 @@ class GraphWindow(matplotlib.backends.backend_wxagg.FigureCanvasWxAgg):
       with self.condition_update:
 	while True:
 	  self.condition_update.wait();
-	  self.update();
+	  e = wx.PyCommandEvent(self.EVTTYPE_UPDATE, wx.ID_ANY);
+	  wx.PostEvent(self, e);
 
 ################################################################################
 ############################### GRAPH DROP TARGET ##############################
