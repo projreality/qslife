@@ -1,3 +1,4 @@
+import calendar;
 from math import *;
 import matplotlib;
 from numpy import *;
@@ -206,8 +207,16 @@ class GraphWindow(matplotlib.backends.backend_wxagg.FigureCanvasWxAgg):
 	  self.update();
     elif (key_code == wx.WXK_SPACE):
       dialog = GoToTimeDialog(self, None, title="Go to ...");
-      dialog.ShowModal();
-      dialog.destroy();
+      result = dialog.ShowModal();
+
+      if (result == wx.ID_OK):
+	length = self.time_range[1] - self.time_range[0];
+	center_tuple = time.strptime(dialog.text_field.GetValue(), "%m/%d/%Y %H:%M:%S");
+	center = (calendar.timegm(center_tuple) - self.timezone * 3600) * 1000;
+	self.time_range = ( center - length/2, center + length/2 );
+	self.update();
+
+      dialog.Destroy();
     else:
       e.Skip();
 
@@ -320,6 +329,10 @@ class GoToTimeDialog(wx.Dialog):
   def onKeyDown(self, e):
     key_code = e.GetKeyCode();
     if (key_code == wx.WXK_ESCAPE):
-      self.Destroy();
-    if ((key_code == wx.WXK_ENTER) or (key_code == wx.WXK_NUMPAD_ENTER)):
-      pass;
+      self.EndModal(wx.ID_CANCEL);
+      self.Close();
+    elif ((key_code == wx.WXK_RETURN) or (key_code == wx.WXK_NUMPAD_ENTER)):
+      self.EndModal(wx.ID_OK);
+      self.Close();
+    else:
+      e.Skip();
