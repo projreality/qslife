@@ -205,7 +205,7 @@ class GraphWindow(matplotlib.backends.backend_wxagg.FigureCanvasWxAgg):
 	  self.graph_config.pop(self.selected_graph);
 	  self.update();
     elif (key_code == wx.WXK_SPACE):
-      dialog = GoToTimeDialog(None, title="Go to ...");
+      dialog = GoToTimeDialog(self, None, title="Go to ...");
       dialog.ShowModal();
       dialog.destroy();
     else:
@@ -298,13 +298,17 @@ class GraphOptionsDialog(wx.Dialog):
 ################################################################################
 class GoToTimeDialog(wx.Dialog):
 
-  def __init__(self, *args, **kwargs):
+  def __init__(self, parent, *args, **kwargs):
     super(GoToTimeDialog, self).__init__(*args, **kwargs);
 
+    self.parent = parent;
     panel = wx.Panel(self);
     box = wx.StaticBox(panel, label="Go to");
     sizer = wx.StaticBoxSizer(box, wx.HORIZONTAL);
     self.text_field = wx.TextCtrl(panel, size=( 190, -1 ));
+    center = ((self.parent.time_range[0] + self.parent.time_range[1]) / 2) / 1000 + self.parent.timezone * 3600;
+    center_str = time.strftime("%m/%d/%Y %H:%M:%S", time.gmtime(center));
+    self.text_field.SetValue(center_str);
     sizer.Add(self.text_field);
     panel.SetSizer(sizer);
 
