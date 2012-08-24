@@ -262,17 +262,21 @@ class GraphWindow(matplotlib.backends.backend_wxagg.FigureCanvasWxAgg):
       dialog.Destroy();
     # Autoscale Y
     elif (key_code == 65):
-      if (self.selected_graph != None):
+      if (self.selected_graph == None):
+	return;
+      elif (len(self.data[self.selected_graph]) == 0):
+	return;
+      else:
         entry = self.graph_config[self.selected_graph];
-        data = self.data[self.selected_graph];
-        if (len(data) != 0):
-	  y_min = data[:,1].min();
-	  y_max = data[:,1].max();
-	  y_range = y_max - y_min;
-	  y_min = floor(y_min - y_range * 0.15);
-	  y_max = floor(y_max + y_range * 0.15);
-	  self.graph_config[self.selected_graph][3] = ( y_min, y_max );
-	  self.update();
+        t = self.data[self.selected_graph][:,0];
+        data = self.data[self.selected_graph][:,1];
+	y_min = data.min();
+	y_max = data.max();
+	y_range = y_max - y_min;
+	y_min = floor(y_min - y_range * 0.15);
+	y_max = floor(y_max + y_range * 0.15);
+	self.graph_config[self.selected_graph][3] = ( y_min, y_max );
+	self.update();
     else:
       e.Skip();
 
