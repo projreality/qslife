@@ -119,8 +119,10 @@ class QSLife(wx.Frame):
       fd.write("clip = " + repr(self.graphs.get_clip()) + "\n");
       fd.write("current_file = " + repr(self.graphs.get_current_file()) + "\n");
       fd.write("graph_config = " + repr(self.graphs.get_graph_config()) + "\n");
+      fd.write("num_visible_graphs = " + repr(self.graphs.get_num_visible_graphs()) + "\n");
       fd.write("time_range = " + repr(self.graphs.get_time_range()) + "\n");
       fd.write("timezone = " + repr(self.graphs.get_timezone()) + "\n");
+      fd.write("top_graph = " + repr(self.graphs.get_top_graph()) + "\n");
       fd.close();
       self.SetStatusText("Saved configuration file \"" + path + "\"");
     except IOError:
