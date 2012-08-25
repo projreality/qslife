@@ -298,7 +298,18 @@ class GraphWindow(matplotlib.backends.backend_wxagg.FigureCanvasWxAgg):
     elif (key_code == wx.WXK_NUMPAD_ENTER):
       dialog = GraphOptionsDialog(self, None, title="Graph Options - " + self.graph_config[self.selected_graph][0]);
       if (dialog.ShowModal() == wx.ID_OK):
-	pass;
+	reload = False;
+	mask_expr = dialog.masking.GetValue();
+	if (self.graph_config[self.selected_graph][4] != mask_expr):
+	  reload = True;
+	  self.graph_config[self.selected_graph][4] = dialog.masking.GetValue();
+	ymin = float(dialog.ymin.GetValue());
+	ymax = float(dialog.ymax.GetValue());
+	self.graph_config[self.selected_graph][3] = ( ymin, ymax );
+	if (reload):
+	  self.load_data();
+	else:
+	  self.update();
       dialog.Destroy();
     elif (key_code == wx.WXK_DELETE):
       if (self.selected_graph != None):
