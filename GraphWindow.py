@@ -39,16 +39,15 @@ class GraphWindow(matplotlib.backends.backend_wxagg.FigureCanvasWxAgg):
 
     self.lock_data = threading.Lock();
 
-    self.condition_data_load = threading.Condition();
-    self.condition_update = threading.Condition();
+    self.condition_load_data = threading.Condition();
 
     self.EVTTYPE_UPDATE = wx.NewEventType();
     self.EVT_UPDATE = wx.PyEventBinder(self.EVTTYPE_UPDATE, 1);
     self.Bind(self.EVT_UPDATE, self.onUpdate);
 
-    update_thread = threading.Thread(target=self.loop_update);
-    update_thread.daemon = True;
-    update_thread.start();
+    load_data_thread = threading.Thread(target=self.loop_load_data);
+    load_data_thread.daemon = True;
+    load_data_thread.start();
 
 ################################################################################
 ################################### ON UPDATE ##################################
@@ -91,8 +90,7 @@ class GraphWindow(matplotlib.backends.backend_wxagg.FigureCanvasWxAgg):
       y_max = y_max + y_range / 4;
 
     self.graph_config[self.selected_graph][3] = ( y_min, y_max );
-    with self.condition_update:
-      self.condition_update.notify();
+    self.update();
 
 ################################################################################
 ############################### GET/SET TIME RANGE #############################
@@ -177,34 +175,34 @@ class GraphWindow(matplotlib.backends.backend_wxagg.FigureCanvasWxAgg):
 ################################## LOAD DATA ###################################
 ################################################################################
   def load_data(self):
-    with self.condition_update:
+    load = False;
+    gap = self.time_range[1] - self.time_range[0];
+    if (self.data == None):
+      load = True;
+    elif (len(self.graph_config) == 0):
       load = False;
-      gap = self.time_range[1] - self.time_range[0];
-      if (self.data == None):
-        load = True;
-      elif (len(self.graph_config) == 0):
-        load = False;
+    else:
+      with self.lock_data:
+        t = self.data[0][:,0];
+      t_min = t.min();
+      t_max = t.max();
+      if ((t_min > self.time_range[0] - gap/2) or (t_max < self.time_range[1] + gap/2)):
+	load = True;
       else:
-        with self.lock_data:
-          t = self.data[0][:,0];
-        t_min = t.min();
-        t_max = t.max();
-        if ((t_min > self.time_range[0] - gap/2) or (t_max < self.time_range[1] + gap/2)):
-	  load = True;
-        else:
-	  load = False;
-      if (load):
-        temp_data = [ ];
-        fd = openFile(self.current_file, mode="r");
-        for i in arange(len(self.graph_config)):
-          entry = self.graph_config[i];
-          temp_data.append(array([ [ data[entry[1]], data[entry[2]] ] for data in fd.getNode(entry[0]).where("(time >= " + str(self.time_range[0] - gap/2) + ") & (time <= " + str(self.time_range[1] + gap/2) + ")") ]));
-        fd.close();
+	load = False;
+    if (load):
+      temp_data = [ ];
+      fd = openFile(self.current_file, mode="r");
+      for i in arange(len(self.graph_config)):
+        entry = self.graph_config[i];
+        temp_data.append(array([ [ data[entry[1]], data[entry[2]] ] for data in fd.getNode(entry[0]).where("(time >= " + str(self.time_range[0] - gap/2) + ") & (time <= " + str(self.time_range[1] + gap/2) + ")") ]));
+      fd.close();
 
-	with self.lock_data:
-	  self.data = temp_data;
+      with self.lock_data:
+	self.data = temp_data;
 
-	self.condition_update.notify();
+      e = wx.PyCommandEvent(self.EVTTYPE_UPDATE, wx.ID_ANY);
+      wx.PostEvent(self, e);
 
 ################################################################################
 ##################################### UPDATE ###################################
@@ -219,7 +217,7 @@ class GraphWindow(matplotlib.backends.backend_wxagg.FigureCanvasWxAgg):
 
     num = len(self.graph_config);
     with self.lock_data:
-      data = self.data;
+      data = list(self.data);
     for i in arange(self.top_graph, num):
       if (i >= self.num_visible_graphs):
         break;
@@ -231,8 +229,7 @@ class GraphWindow(matplotlib.backends.backend_wxagg.FigureCanvasWxAgg):
       val = val[disp];
       if (len(val) != 0):
 	subplot.plot(t, val);
-      else:
-	subplot.get_axes().set_xlim(self.time_range);
+      subplot.get_axes().set_xlim(self.time_range);
       entry = self.graph_config[i];
       result = re.search("^/([A-Za-z0-9]+)/([A-Za-z0-9]+)_([A-Za-z0-9]+)$", entry[0]).groups();
       subplot.set_ylabel(result[1] + "\n" + result[2]);
@@ -253,31 +250,28 @@ class GraphWindow(matplotlib.backends.backend_wxagg.FigureCanvasWxAgg):
     if (key_code == wx.WXK_NUMPAD_ADD):
       gap = self.time_range[1] - self.time_range[0];
       self.time_range = ( self.time_range[0] + gap/4, self.time_range[1] - gap/4 );
-      with self.condition_update:
-	self.condition_update.notify();
+      self.update();
     # Zoom out
     elif (key_code == wx.WXK_NUMPAD_SUBTRACT):
       gap = self.time_range[1] - self.time_range[0];
       self.time_range = ( self.time_range[0] - gap/2, self.time_range[1] + gap/2 );
-      with self.condition_update:
-	self.condition_update.notify();
+      self.update();
+      with self.condition_load_data:
+	self.condition_load_data.notify();
     # Move left
     elif ((key_code == wx.WXK_NUMPAD_LEFT) or (key_code == wx.WXK_NUMPAD4) or (key_code == wx.WXK_LEFT)):
       gap = self.time_range[1] - self.time_range[0];
       self.time_range = ( self.time_range[0] - gap/2, self.time_range[1] - gap/2 );
-      with self.condition_update:
-	self.condition_update.notify();
+      self.update();
     # Move right
     elif ((key_code == wx.WXK_NUMPAD_RIGHT) or (key_code == wx.WXK_NUMPAD6) or (key_code == wx.WXK_RIGHT)):
       gap = self.time_range[1] - self.time_range[0];
       self.time_range = ( self.time_range[0] + gap/2, self.time_range[1] + gap/2 );
-      with self.condition_update:
-	self.condition_update.notify();
+      self.update();
     elif ((key_code == wx.WXK_NUMPAD_UP) or (key_code == wx.WXK_NUMPAD8) or (key_code == wx.WXK_UP)):
       if (self.top_graph > 0):
 	self.top_graph = self.top_graph - 1;
-	with self.condition_update:
-	  self.condition_update.notify();
+	self.update();
     elif ((key_code == wx.WXK_NUMPAD_DOWN) or (key_code == wx.WXK_NUMPAD2) or (key_code == wx.WXK_DOWN)):
       if (self.top_graph < len(self.graph_config) - 1):
 	self.top_graph = self.top_graph + 1;
@@ -291,11 +285,10 @@ class GraphWindow(matplotlib.backends.backend_wxagg.FigureCanvasWxAgg):
 	dialog = wx.MessageDialog(None, "Are you sure you want to remove the graph?", "Confirm delete graph", wx.YES_NO | wx.NO_DEFAULT | wx.ICON_EXCLAMATION);
 	if (dialog.ShowModal() == wx.ID_YES):
 	  with self.lock_data:
-	    with self.condition_update:
-	      self.graph_config.pop(self.selected_graph);
-	      self.data.pop(self.selected_graph);
-	      self.selected_graph = None;
-	      self.condition_update.notify();
+	    self.graph_config.pop(self.selected_graph);
+	    self.data.pop(self.selected_graph);
+	    self.selected_graph = None;
+	  self.update();
     elif (key_code == wx.WXK_SPACE):
       dialog = GoToTimeDialog(self, None, title="Go to ...");
       result = dialog.ShowModal();
@@ -312,23 +305,22 @@ class GraphWindow(matplotlib.backends.backend_wxagg.FigureCanvasWxAgg):
     # Autoscale Y
     elif (key_code == 65):
       with self.lock_data:
-	temp_data = self.data;
+	temp_data = list(self.data);
       if (self.selected_graph == None):
 	return;
       elif (len(temp_data[self.selected_graph]) == 0):
 	return;
       else:
-	with self.condition_update:
-	  entry = self.graph_config[self.selected_graph];
-	  t = temp_data[self.selected_graph][:,0];
-	  data = temp_data[self.selected_graph][:,1];
-	  y_min = data.min();
-	  y_max = data.max();
-	  y_range = y_max - y_min;
-	  y_min = floor(y_min - y_range * 0.15);
-	  y_max = floor(y_max + y_range * 0.15);
-	  self.graph_config[self.selected_graph][3] = ( y_min, y_max );
-	  self.condition_update.notify();
+	entry = self.graph_config[self.selected_graph];
+	t = temp_data[self.selected_graph][:,0];
+	data = temp_data[self.selected_graph][:,1];
+	y_min = data.min();
+	y_max = data.max();
+	y_range = y_max - y_min;
+	y_min = floor(y_min - y_range * 0.15);
+	y_max = floor(y_max + y_range * 0.15);
+	self.graph_config[self.selected_graph][3] = ( y_min, y_max );
+	self.update();
     else:
       e.Skip();
 
@@ -388,15 +380,15 @@ class GraphWindow(matplotlib.backends.backend_wxagg.FigureCanvasWxAgg):
     return ( ticks, labels );
 
 ################################################################################
-################################# LOOP UPDATE ##################################
+################################## LOAD DATA ###################################
 ################################################################################
-  def loop_update(self):
+  def loop_load_data(self):
     while True:
-      with self.condition_update:
+      with self.condition_load_data:
 	while True:
-	  self.condition_update.wait();
-	  e = wx.PyCommandEvent(self.EVTTYPE_UPDATE, wx.ID_ANY);
-	  wx.PostEvent(self, e);
+	  self.condition_load_data.wait();
+	  time.sleep(1);
+	  self.load_data();
 
 ################################################################################
 ############################### GRAPH DROP TARGET ##############################
