@@ -104,7 +104,7 @@ class QSLife(wx.Frame):
     self.graphs.set_time_range(temp["time_range"]);
     self.graphs.set_timezone(temp["timezone"]);
     self.graphs.set_top_graph(temp["top_graph"]);
-    self.graphs.update();
+    self.graphs.load_data();
     self.current_config = path;
 
 ################################################################################
