@@ -306,8 +306,8 @@ class GraphWindow(matplotlib.backends.backend_wxagg.FigureCanvasWxAgg):
 	center_tuple = time.strptime(dialog.text_field.GetValue(), "%m/%d/%Y %H:%M:%S");
 	center = (calendar.timegm(center_tuple) - self.timezone * 3600) * 1000;
 	self.time_range = ( center - length/2, center + length/2 );
-	self.load_data();
 	self.update();
+	self.load_data();
 
       dialog.Destroy();
     # Autoscale Y
