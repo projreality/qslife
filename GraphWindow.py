@@ -296,7 +296,7 @@ class GraphWindow(matplotlib.backends.backend_wxagg.FigureCanvasWxAgg):
 	self.top_graph = self.top_graph + 1;
 	self.update();
     elif (key_code == wx.WXK_NUMPAD_ENTER):
-      dialog = GraphOptionsDialog(None, title="Graph Options");
+      dialog = GraphOptionsDialog(self, None, title="Graph Options");
       dialog.ShowModal();
       dialog.destroy();
     elif (key_code == wx.WXK_DELETE):
@@ -428,13 +428,44 @@ class GraphDropTarget(wx.TextDropTarget):
 ################################################################################
 class GraphOptionsDialog(wx.Dialog):
 
-  def __init__(self, *args, **kwargs):
+  def __init__(self, parent, *args, **kwargs):
     super(GraphOptionsDialog, self).__init__(*args, **kwargs);
 
+    self._parent = parent;
     panel = wx.Panel(self);
-    sizer = wx.BoxSizer(wx.VERTICAL);
+    box = wx.StaticBox(panel, label="Graph Options");
+    box_sizer = wx.StaticBoxSizer(box, wx.VERTICAL);
+    sizer = wx.GridBagSizer(5, 5);
 
-    self.SetSize(( 250, 200 ));
+    sizer.Add(wx.StaticText(panel, label="Valid condition"), pos=( 0, 0 ), flag=wx.LEFT | wx.TOP, border=4)
+
+    self.masking = wx.TextCtrl(panel, size=( 250, -1 ));
+    self.masking.SetValue(self._parent.graph_config[self._parent.selected_graph][4]);
+    sizer.Add(self.masking, pos=( 0, 1 ), span=( 1, 3) );
+
+    sizer.Add(wx.StaticText(panel, label="Y min"), pos=( 1, 0 ), flag=wx.LEFT | wx.TOP, border=4);
+
+    self.ymin = wx.TextCtrl(panel, size=( 75, -1 ));
+    self.ymin.SetValue(str(self._parent.graph_config[self._parent.selected_graph][3][0]));
+    sizer.Add(self.ymin, pos=( 1, 1 ), span=( 1, 1 ));
+
+    sizer.Add(wx.StaticText(panel, label="Y max"), pos=( 2, 0 ), flag=wx.LEFT | wx.TOP, border=4);
+
+    self.ymax = wx.TextCtrl(panel, size=( 75, -1 ));
+    self.ymax.SetValue(str(self._parent.graph_config[self._parent.selected_graph][3][1]));
+    sizer.Add(self.ymax, pos=( 2, 1 ), span=( 1, 1 ));
+
+    ok_button = wx.Button(panel, label="OK");
+    sizer.Add(ok_button, pos=( 4, 2 ), span=( 1, 1 ));
+
+    cancel_button = wx.Button(panel, label="Cancel");
+    sizer.Add(cancel_button, pos=( 4, 3 ), span=( 1, 1 ));
+
+    box_sizer.Add(sizer);
+
+    panel.SetSizer(box_sizer);
+
+    self.SetSize(( 380, 175 ));
 
 ################################################################################
 ############################## GO TO TIME DIALOG ###############################
