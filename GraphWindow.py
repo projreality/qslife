@@ -35,6 +35,8 @@ class GraphWindow(matplotlib.backends.backend_wxagg.FigureCanvasWxAgg):
     self.selected_graph = None;
     self.top_graph = 0;
 
+    self.data_range = None;
+
     self.mpl_connect("button_press_event", self.onClick);
 
     self.lock_data = threading.Lock();
@@ -177,16 +179,12 @@ class GraphWindow(matplotlib.backends.backend_wxagg.FigureCanvasWxAgg):
   def load_data(self):
     load = False;
     gap = self.time_range[1] - self.time_range[0];
-    if (self.data == None):
+    if ((self.data == None) or (self.data_range == None)):
       load = True;
     elif (len(self.graph_config) == 0):
       load = False;
     else:
-      with self.lock_data:
-        t = self.data[0][:,0];
-      t_min = t.min();
-      t_max = t.max();
-      if ((t_min > self.time_range[0] - gap/2) or (t_max < self.time_range[1] + gap/2)):
+      if ((self.data_range[0] > self.time_range[0] - gap*0.5) or (self.data_range[1] < self.time_range[1] + gap*0.5)):
 	load = True;
       else:
 	load = False;
@@ -195,8 +193,9 @@ class GraphWindow(matplotlib.backends.backend_wxagg.FigureCanvasWxAgg):
       fd = openFile(self.current_file, mode="r");
       for i in arange(len(self.graph_config)):
         entry = self.graph_config[i];
-        temp_data.append(array([ [ data[entry[1]], data[entry[2]] ] for data in fd.getNode(entry[0]).where("(time >= " + str(self.time_range[0] - gap/2) + ") & (time <= " + str(self.time_range[1] + gap/2) + ")") ]));
+        temp_data.append(array([ [ data[entry[1]], data[entry[2]] ] for data in fd.getNode(entry[0]).where("(time >= " + str(self.time_range[0] - gap*1.5) + ") & (time <= " + str(self.time_range[1] + gap*1.5) + ")") ]));
       fd.close();
+      self.data_range = (self.time_range[0] - gap*1.5, self.time_range[1] + gap*1.5);
 
       with self.lock_data:
 	self.data = temp_data;
