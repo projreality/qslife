@@ -123,6 +123,15 @@ class GraphWindow(matplotlib.backends.backend_wxagg.FigureCanvasWxAgg):
     else:
       self.graph_config.insert(pos, config);
 
+    with self.lock_data:
+      self.data.append(transpose(array([ [ ], [ ] ])));
+
+    self.update();
+
+    with self.condition_load_data:
+      self.data_range = None;
+      self.condition_load_data.notify();
+
 ################################################################################
 ############################### GET/SET TOP GRAPH ##############################
 ################################################################################
@@ -401,7 +410,6 @@ class GraphDropTarget(wx.TextDropTarget):
   def OnDropText(self, x, y, data):
     config = [ data, "time", "value", ( 50, 150 ) ];
     self.object.add_graph(-1, config);
-    self.object.update();
 
 ################################################################################
 ################################## GRAPH DIALOG ################################
