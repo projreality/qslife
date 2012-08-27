@@ -95,15 +95,10 @@ class QSLife(wx.Frame):
   def open_config(self, path):
     temp = { };
     execfile(path, temp);
-    self.current_file = temp["current_file"];
+    self.current_file = temp["options"]["current_file"];
     self.load_file(self.current_file);
-    self.graphs.set_clip(temp["clip"]);
-    self.graphs.set_current_file(self.current_file);
+    self.graphs.set_options(temp["options"]);
     self.graphs.set_graph_config(temp["graph_config"]);
-    self.graphs.set_num_visible_graphs(temp["num_visible_graphs"]);
-    self.graphs.set_time_range(temp["time_range"]);
-    self.graphs.set_timezone(temp["timezone"]);
-    self.graphs.set_top_graph(temp["top_graph"]);
     self.graphs.load_data();
     self.current_config = path;
 
@@ -116,13 +111,8 @@ class QSLife(wx.Frame):
 
     try:
       fd = open(path, "w");
-      fd.write("clip = " + repr(self.graphs.get_clip()) + "\n");
-      fd.write("current_file = " + repr(self.graphs.get_current_file()) + "\n");
       fd.write("graph_config = " + repr(self.graphs.get_graph_config()) + "\n");
-      fd.write("num_visible_graphs = " + repr(self.graphs.get_num_visible_graphs()) + "\n");
-      fd.write("time_range = " + repr(self.graphs.get_time_range()) + "\n");
-      fd.write("timezone = " + repr(self.graphs.get_timezone()) + "\n");
-      fd.write("top_graph = " + repr(self.graphs.get_top_graph()) + "\n");
+      fd.write("options = " + repr(self.graphs.get_options()) + "\n");
       fd.close();
       self.SetStatusText("Saved configuration file \"" + path + "\"");
     except IOError:
