@@ -80,8 +80,8 @@ class GraphWindow(matplotlib.backends.backend_wxagg.FigureCanvasWxAgg):
     if ((self.selected_graph == None) or (rot == 0)):
       return;
 
-    y_min = self.graph_config[self.selected_graph][3][0];
-    y_max = self.graph_config[self.selected_graph][3][1];
+    y_min = self.graph_config[self.selected_graph]["yscale"][0];
+    y_max = self.graph_config[self.selected_graph]["yscale"][1];
     y_range = y_max - y_min;
 
     if (rot > 0):
@@ -91,7 +91,7 @@ class GraphWindow(matplotlib.backends.backend_wxagg.FigureCanvasWxAgg):
       y_min = y_min - y_range / 4;
       y_max = y_max + y_range / 4;
 
-    self.graph_config[self.selected_graph][3] = ( y_min, y_max );
+    self.graph_config[self.selected_graph]["yscale"] = ( y_min, y_max );
     self.update();
 
 ################################################################################
@@ -202,8 +202,8 @@ class GraphWindow(matplotlib.backends.backend_wxagg.FigureCanvasWxAgg):
       fd = openFile(self.current_file, mode="r");
       for i in arange(len(self.graph_config)):
         entry = self.graph_config[i];
-        x = ma.array([ [ data[entry[1]], data[entry[2]] ] for data in fd.getNode(entry[0]).where("(time >= " + str(self.time_range[0] - gap*1.5) + ") & (time <= " + str(self.time_range[1] + gap*1.5) + ")") ]);
-	mask_expr = self.graph_config[i][4];
+        x = ma.array([ [ data[entry["time"]], data[entry["value"]] ] for data in fd.getNode(entry["node"]).where("(time >= " + str(self.time_range[0] - gap*1.5) + ") & (time <= " + str(self.time_range[1] + gap*1.5) + ")") ]);
+	mask_expr = self.graph_config[i]["valid"];
 	if (mask_expr != ""):
 	  val = ma.masked_where(~eval(mask_expr), x);
 	else:
@@ -250,12 +250,12 @@ class GraphWindow(matplotlib.backends.backend_wxagg.FigureCanvasWxAgg):
 	subplot.plot(t, val);
       subplot.get_axes().set_xlim(self.time_range);
       entry = self.graph_config[i];
-      result = re.search("^/([A-Za-z0-9]+)/([A-Za-z0-9]+)_([A-Za-z0-9]+)$", entry[0]).groups();
+      result = re.search("^/([A-Za-z0-9]+)/([A-Za-z0-9]+)_([A-Za-z0-9]+)$", entry["node"]).groups();
       subplot.set_ylabel(result[1] + "\n" + result[2]);
       ax = subplot.get_axes();
       ax.set_xticks(ticks);
       ax.set_xticklabels(labels);
-      ax.set_ylim(entry[3]);
+      ax.set_ylim(entry["yscale"]);
 
     self.draw();
 
@@ -296,16 +296,16 @@ class GraphWindow(matplotlib.backends.backend_wxagg.FigureCanvasWxAgg):
 	self.top_graph = self.top_graph + 1;
 	self.update();
     elif (key_code == wx.WXK_NUMPAD_ENTER):
-      dialog = GraphOptionsDialog(self, None, title="Graph Options - " + self.graph_config[self.selected_graph][0]);
+      dialog = GraphOptionsDialog(self, None, title="Graph Options - " + self.graph_config[self.selected_graph]["node"]);
       if (dialog.ShowModal() == wx.ID_OK):
 	reload = False;
 	mask_expr = dialog.masking.GetValue();
-	if (self.graph_config[self.selected_graph][4] != mask_expr):
+	if (self.graph_config[self.selected_graph]["valid"] != mask_expr):
 	  reload = True;
-	  self.graph_config[self.selected_graph][4] = dialog.masking.GetValue();
+	  self.graph_config[self.selected_graph]["valid"] = dialog.masking.GetValue();
 	ymin = float(dialog.ymin.GetValue());
 	ymax = float(dialog.ymax.GetValue());
-	self.graph_config[self.selected_graph][3] = ( ymin, ymax );
+	self.graph_config[self.selected_graph]["yscale"] = ( ymin, ymax );
 	if (reload):
 	  self.load_data();
 	else:
@@ -351,7 +351,7 @@ class GraphWindow(matplotlib.backends.backend_wxagg.FigureCanvasWxAgg):
 	y_range = y_max - y_min;
 	y_min = floor(y_min - y_range * 0.15);
 	y_max = ceil(y_max + y_range * 0.15);
-	self.graph_config[self.selected_graph][3] = ( y_min, y_max );
+	self.graph_config[self.selected_graph]["yscale"] = ( y_min, y_max );
 	self.update();
     else:
       e.Skip();
@@ -432,7 +432,7 @@ class GraphDropTarget(wx.TextDropTarget):
     self.object = object;
 
   def OnDropText(self, x, y, data):
-    config = [ data, "time", "value", ( 50, 150 ) ];
+    config = { "node":data, "time":"time", "value":"value", "yscale":( 50, 150 ), "valid":"" };
     self.object.add_graph(-1, config);
 
 ################################################################################
@@ -458,21 +458,21 @@ class GraphOptionsDialog(wx.Dialog):
     sizer.Add(wx.StaticText(panel, label="Valid condition"), pos=( 0, 0 ), flag=wx.LEFT | wx.TOP, border=4)
 
     self.masking = wx.TextCtrl(panel, size=( 250, -1 ));
-    self.masking.SetValue(self._parent.graph_config[self._parent.selected_graph][4]);
+    self.masking.SetValue(self._parent.graph_config[self._parent.selected_graph]["valid"]);
     self.masking.Bind(wx.EVT_KEY_DOWN, self.onKeyDown);
     sizer.Add(self.masking, pos=( 0, 1 ), span=( 1, 3) );
 
     sizer.Add(wx.StaticText(panel, label="Y min"), pos=( 1, 0 ), flag=wx.LEFT | wx.TOP, border=4);
 
     self.ymin = wx.TextCtrl(panel, size=( 75, -1 ));
-    self.ymin.SetValue(str(self._parent.graph_config[self._parent.selected_graph][3][0]));
+    self.ymin.SetValue(str(self._parent.graph_config[self._parent.selected_graph]["yscale"][0]));
     self.ymin.Bind(wx.EVT_KEY_DOWN, self.onKeyDown);
     sizer.Add(self.ymin, pos=( 1, 1 ), span=( 1, 1 ));
 
     sizer.Add(wx.StaticText(panel, label="Y max"), pos=( 2, 0 ), flag=wx.LEFT | wx.TOP, border=4);
 
     self.ymax = wx.TextCtrl(panel, size=( 75, -1 ));
-    self.ymax.SetValue(str(self._parent.graph_config[self._parent.selected_graph][3][1]));
+    self.ymax.SetValue(str(self._parent.graph_config[self._parent.selected_graph]["yscale"][1]));
     self.ymax.Bind(wx.EVT_KEY_DOWN, self.onKeyDown);
     sizer.Add(self.ymax, pos=( 2, 1 ), span=( 1, 1 ));
 
