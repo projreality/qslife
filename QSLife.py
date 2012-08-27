@@ -129,7 +129,7 @@ class QSLife(wx.Frame):
     self.graphs.set_current_file(self.current_file);
 
     # Populate tree
-    fd = openFile(path, mode="r");
+    fd = openFile(path + "/index.h5", mode="r");
     root = self.tree.GetRootItem();
     self.tree.SetItemHasChildren(root);
     for item in fd.root:
@@ -145,15 +145,19 @@ class QSLife(wx.Frame):
 
 #################################### FILE NEW ##################################
   def onFileNew(self, e):
-    dialog = wx.FileDialog(None, "New HDFQS file ...", ".", style=wx.FD_SAVE, wildcard="*.h5");
+    dialog = wx.FileDialog(None, "New HDFQS file group...", ".", style=wx.FD_SAVE);
     if (dialog.ShowModal() == wx.ID_OK):
       path = dialog.GetPath();
       if (os.path.exists(path)):
 	dialog = wx.MessageDialog(None, "File \"" + path + "\" exists - overwrite?", "Confirm", wx.YES_NO);
-	if (dialog.ShowModal() == wx.ID_YES):
-	  init.init(path);
-	  self.load_file(path);
-	  self.statusbar.SetStatusText("Created new file \"" + path + "\"");
+	if (dialog.ShowModal() != wx.ID_YES):
+	  return;
+      else:
+	os.mkdir(path);
+      init.init(path + "/index.h5");
+      self.load_file(path);
+      self.statusbar.SetStatusText("Created new file \"" + path + "\"");
+    self.onFileSaveAs(e);
 
 ################################### FILE OPEN ##################################
   def onFileOpen(self, e):

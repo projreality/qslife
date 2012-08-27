@@ -29,8 +29,8 @@ class GraphWindow(matplotlib.backends.backend_wxagg.FigureCanvasWxAgg):
     self.options["clip"] = 1000;
     self.options["current_file"] = None;
     self.graph_config = [ ]; # List of data to graph
-    self.options["num_visible_graphs"] = 0;
-    self.options["time_range"] = ( 0, 0 ); # time range to display data
+    self.options["num_visible_graphs"] = 6;
+    self.options["time_range"] = ( 0, 60000 ); # time range to display data
     self.options["timezone"] = 0;
     self.options["selected_graph"] = None;
     self.options["top_graph"] = 0;
@@ -196,10 +196,12 @@ class GraphWindow(matplotlib.backends.backend_wxagg.FigureCanvasWxAgg):
 ################################################################################
 ################################## LOAD DATA ###################################
 ################################################################################
-  def load_data(self):
+  def load_data(self, force=False):
     load = False;
     gap = self.options["time_range"][1] - self.options["time_range"][0];
-    if ((self.data == None) or (self.data_range == None)):
+    if (force):
+      load = True;
+    elif ((self.data == None) or (self.data_range == None)):
       load = True;
     elif (len(self.graph_config) == 0):
       load = False;
@@ -210,7 +212,7 @@ class GraphWindow(matplotlib.backends.backend_wxagg.FigureCanvasWxAgg):
 	load = False;
     if (load):
       temp_data = [ ];
-      fd = openFile(self.options["current_file"], mode="r");
+      fd = openFile(self.options["current_file"] + "/index.h5", mode="r");
       for i in arange(len(self.graph_config)):
         entry = self.graph_config[i];
         x = ma.array([ [ data[entry["time"]], data[entry["value"]] ] for data in fd.getNode(entry["node"]).where("(time >= " + str(self.options["time_range"][0] - gap*1.5) + ") & (time <= " + str(self.options["time_range"][1] + gap*1.5) + ")") ]);
@@ -233,7 +235,7 @@ class GraphWindow(matplotlib.backends.backend_wxagg.FigureCanvasWxAgg):
 ##################################### UPDATE ###################################
 ################################################################################
   def update(self):
-    if (self.options["current_file"] == None):
+    if ((self.options["current_file"] == None) or (self.data == None)):
       return;
 
     # Condition for when time range is outside of range of available data, but still doing a GUI update
@@ -251,11 +253,14 @@ class GraphWindow(matplotlib.backends.backend_wxagg.FigureCanvasWxAgg):
       if (i >= self.options["num_visible_graphs"]):
         break;
       subplot = self.figure.add_subplot(self.options["num_visible_graphs"], 1, i + 1 - self.options["top_graph"]);
-      t = data[i][:,0];
-      val = data[i][:,1];
-      disp = (t >= self.options["time_range"][0]) & (t <= self.options["time_range"][1]);
-      t = t[disp];
-      val = val[disp];
+      if (len(data[i]) == 0):
+	val = array([]);
+      else:
+	t = data[i][:,0];
+	val = data[i][:,1];
+	disp = (t >= self.options["time_range"][0]) & (t <= self.options["time_range"][1]);
+	t = t[disp];
+	val = val[disp];
 
       if (len(val) != 0):
 	subplot.plot(t, val);
@@ -318,7 +323,7 @@ class GraphWindow(matplotlib.backends.backend_wxagg.FigureCanvasWxAgg):
 	ymax = float(dialog.ymax.GetValue());
 	self.graph_config[self.options["selected_graph"]]["yscale"] = ( ymin, ymax );
 	if (reload):
-	  self.load_data();
+	  self.load_data(force=True);
 	else:
 	  self.update();
       dialog.Destroy();
