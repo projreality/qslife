@@ -1,3 +1,9 @@
-[submodule "lib/olr_import"]
-	path = lib/olr_import
-	url = /var/lib/git/olr_import.git
+[submodule "lib/hdfqs"]
+	path = lib/hdfqs
+	url = /var/lib/git/hdfqs.git
+[submodule "lib/olr_importer"]
+	path = lib/olr_importer
+	url = /var/lib/git/olr_importer.git
+[submodule "lib/olr_importer_nonin"]
+	path = lib/olr_importer_nonin
+	url = /var/lib/git/olr_importer_nonin.git
