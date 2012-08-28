@@ -5,6 +5,14 @@ import sys;
 from tables import *;
 import wx;
 
+for path in os.listdir("lib"):
+  sys.path.append("lib/" + path);
+
+for path in os.listdir("lib"):
+  for subpath in os.listdir("lib/" + path):
+    if (subpath[-3:] == ".py"):
+      exec("from " + subpath[:-3] + " import *;");
+
 matplotlib.interactive(True);
 matplotlib.use("WXAgg");
 
@@ -152,7 +160,7 @@ class QSLife(wx.Frame):
 	  return;
       else:
 	os.mkdir(path);
-      # Need to initialize HDFQS file at     path + "/index.h5"
+      HDFQS(path + "/index.h5");
       self.load_file(path);
       self.statusbar.SetStatusText("Created new file \"" + path + "\"");
     self.onFileSaveAs(e);
