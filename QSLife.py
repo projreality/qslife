@@ -7,9 +7,7 @@ import wx;
 
 matplotlib.interactive(True);
 matplotlib.use("WXAgg");
-sys.path.append("lib/olr_import");
 
-import init;
 from matplotlib.backends.backend_wxagg import FigureCanvasWxAgg;
 from matplotlib.figure import Figure;
 
@@ -154,7 +152,7 @@ class QSLife(wx.Frame):
 	  return;
       else:
 	os.mkdir(path);
-      init.init(path + "/index.h5");
+      # Need to initialize HDFQS file at     path + "/index.h5"
       self.load_file(path);
       self.statusbar.SetStatusText("Created new file \"" + path + "\"");
     self.onFileSaveAs(e);
