@@ -331,11 +331,15 @@ class GraphWindow(matplotlib.backends.backend_wxagg.FigureCanvasWxAgg):
       gap = self.options["time_range"][1] - self.options["time_range"][0];
       self.options["time_range"] = ( self.options["time_range"][0] - gap/2, self.options["time_range"][1] - gap/2 );
       self.update();
+      with self.condition_load_data:
+	self.condition_load_data.notify();
     # Move right
     elif ((key_code == wx.WXK_NUMPAD_RIGHT) or (key_code == wx.WXK_NUMPAD6) or (key_code == wx.WXK_RIGHT)):
       gap = self.options["time_range"][1] - self.options["time_range"][0];
       self.options["time_range"] = ( self.options["time_range"][0] + gap/2, self.options["time_range"][1] + gap/2 );
       self.update();
+      with self.condition_load_data:
+	self.condition_load_data.notify();
     elif ((key_code == wx.WXK_NUMPAD_UP) or (key_code == wx.WXK_NUMPAD8) or (key_code == wx.WXK_UP)):
       if (self.options["top_graph"] > 0):
 	self.options["top_graph"] = self.options["top_graph"] - 1;
