@@ -395,13 +395,14 @@ class GraphWindow(matplotlib.backends.backend_wxagg.FigureCanvasWxAgg):
 	t = temp_data[self.options["selected_graph"]][:,0];
 	disp = (t >= self.options["time_range"][0]) & (t <= self.options["time_range"][1]);
 	data = temp_data[self.options["selected_graph"]][:,1][disp];
-	y_min = data.min();
-	y_max = data.max();
-	y_range = y_max - y_min;
-	y_min = floor(y_min - y_range * 0.15);
-	y_max = ceil(y_max + y_range * 0.15);
-	self.graph_config[self.options["selected_graph"]]["yscale"] = ( y_min, y_max );
-	self.update();
+	if (data.shape != ( 0, )):
+	  y_min = data.min();
+	  y_max = data.max();
+	  y_range = y_max - y_min;
+	  y_min = floor(y_min - y_range * 0.15);
+	  y_max = ceil(y_max + y_range * 0.15);
+	  self.graph_config[self.options["selected_graph"]]["yscale"] = ( y_min, y_max );
+	  self.update();
     else:
       e.Skip();
 
