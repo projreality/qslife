@@ -235,15 +235,15 @@ class GraphWindow(matplotlib.backends.backend_wxagg.FigureCanvasWxAgg):
 	  for i in arange(len(self.graph_config)):
 	    entry = self.graph_config[i];
 	    x = ma.array([ [ data[entry["time"]], data[entry["value"]] ] for data in fd.getNode(entry["node"]).where("(time >= " + str(self.options["time_range"][0] - gap*1.5) + ") & (time <= " + str(self.options["time_range"][1] + gap*1.5) + ")") ]);
-	    mask_expr = self.graph_config[i]["valid"];
-	    if (mask_expr != ""):
-	      t = x[:,0];
-	      x = x[:,1];
-	      x = ma.masked_where(~eval(mask_expr), x);
-	      val = ma.concatenate(( t[:,newaxis], x[:,newaxis] ), axis=1);
-	    else:
-	      val = x;
-	    if (val.shape != ( 0, )):
+	    if (x.shape != ( 0, )):
+	      mask_expr = self.graph_config[i]["valid"];
+	      if (mask_expr != ""):
+		t = x[:,0];
+		x = x[:,1];
+		x = ma.masked_where(~eval(mask_expr), x);
+		val = ma.concatenate(( t[:,newaxis], x[:,newaxis] ), axis=1);
+	      else:
+		val = x;
 	      if (temp_data[i].shape == ( 0, 2 )):
 		temp_data[i] = val;
 	      else:
