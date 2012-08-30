@@ -351,18 +351,17 @@ class GraphWindow(matplotlib.backends.backend_wxagg.FigureCanvasWxAgg):
     elif (key_code == wx.WXK_NUMPAD_ENTER):
       dialog = GraphOptionsDialog(self, None, title="Graph Options - " + self.graph_config[self.options["selected_graph"]]["node"]);
       if (dialog.ShowModal() == wx.ID_OK):
-	reload = False;
 	mask_expr = dialog.masking.GetValue();
 	if (self.graph_config[self.options["selected_graph"]]["valid"] != mask_expr):
-	  reload = True;
-	  self.graph_config[self.options["selected_graph"]]["valid"] = dialog.masking.GetValue();
+	  self.graph_config[self.options["selected_graph"]]["valid"] = mask_expr;
+	  x = self.data[self.options["selected_graph"]];
+	  x.mask = False;
+	  if (mask_expr != ""):
+	    self.data[self.options["selected_graph"]] = ma.masked_where(~eval(mask_expr), x);
 	ymin = float(dialog.ymin.GetValue());
 	ymax = float(dialog.ymax.GetValue());
 	self.graph_config[self.options["selected_graph"]]["yscale"] = ( ymin, ymax );
-	if (reload):
-	  self.load_data(force=True);
-	else:
-	  self.update();
+	self.update();
       dialog.Destroy();
     elif (key_code == wx.WXK_DELETE):
       if (self.options["selected_graph"] != None):
