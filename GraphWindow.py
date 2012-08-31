@@ -357,7 +357,10 @@ class GraphWindow(matplotlib.backends.backend_wxagg.FigureCanvasWxAgg):
 	  x = self.data[self.options["selected_graph"]];
 	  x.mask = False;
 	  if (mask_expr != ""):
-	    self.data[self.options["selected_graph"]] = ma.masked_where(~eval(mask_expr), x);
+	    t = x[:,0];
+	    x = x[:,1];
+	    x = ma.masked_where(~eval(mask_expr), x);
+	    self.data[self.options["selected_graph"]] = ma.concatenate(( t[:,newaxis], x[:,newaxis] ), axis=1);
 	ymin = float(dialog.ymin.GetValue());
 	ymax = float(dialog.ymax.GetValue());
 	self.graph_config[self.options["selected_graph"]]["yscale"] = ( ymin, ymax );
