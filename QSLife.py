@@ -41,6 +41,8 @@ class QSLife(wx.Frame):
     self.window = wx.SplitterWindow(self, wx.ID_ANY, style=wx.SP_3D);
     self.gui_miscellaneous_setup();
 
+    self.tree = None;
+
 ################################################################################
 ################################ CREATE MENUBAR ################################
 ################################################################################
@@ -86,7 +88,6 @@ class QSLife(wx.Frame):
 ################################################################################
   def create_window(self):
     self.tree = wx.TreeCtrl(self.window, wx.ID_ANY);
-    self.tree.AddRoot("/");
     panel = wx.Panel(self.window, style=wx.NO_FULL_REPAINT_ON_RESIZE);
     self.window.SplitVertically(self.tree, panel, 300);
 
@@ -143,11 +144,20 @@ class QSLife(wx.Frame):
     self.current_file = path;
     self.SetTitle(path);
 
-    self.create_window();
-    self.graphs.set_current_file(self.current_file);
+    if (self.tree == None):
+      self.create_window();
+      self.graphs.set_current_file(self.current_file);
+    else:
+      self.tree.DeleteAllItems();
 
-    # Populate tree
-    fd = openFile(path + "/index.h5", mode="r");
+    self.populate_tree();
+
+################################################################################
+################################# POPULATE TREE ################################
+################################################################################
+  def populate_tree(self):
+    self.tree.AddRoot("/");
+    fd = openFile(self.current_file + "/index.h5", mode="r");
     root = self.tree.GetRootItem();
     self.tree.SetItemHasChildren(root);
     for item in fd.root:
@@ -231,6 +241,7 @@ class QSLife(wx.Frame):
 	importer = self.importers[e.GetId()];
 	i = importer(self.current_file);
 	i.import_data(path);
+	self.load_file(self.current_file);
 
 ################################### DRAG INIT ##################################
   def onDragInit(self, e):
