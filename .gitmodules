@@ -7,3 +7,6 @@
 [submodule "lib/olr_importer_nonin"]
 	path = lib/olr_importer_nonin
 	url = /var/lib/git/olr_importer_nonin.git
+[submodule "lib/olr_importer_nonin_ppg"]
+	path = lib/olr_importer_nonin_ppg
+	url = /var/lib/git/olr_importer_nonin_ppg.git
