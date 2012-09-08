@@ -16,3 +16,6 @@
 [submodule "lib/olr_importer_esensor_humidity"]
 	path = lib/olr_importer_esensor_humidity
 	url = /var/lib/git/olr_importer_esensor_humidity.git
+[submodule "lib/olr_importer_esensor_color"]
+	path = lib/olr_importer_esensor_color
+	url = /var/lib/git/olr_importer_esensor_color.git
