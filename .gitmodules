@@ -13,3 +13,6 @@
 [submodule "lib/olr_importer_esensor_temperature"]
 	path = lib/olr_importer_esensor_temperature
 	url = /var/lib/git/olr_importer_esensor_temperature.git
+[submodule "lib/olr_importer_esensor_humidity"]
+	path = lib/olr_importer_esensor_humidity
+	url = /var/lib/git/olr_importer_esensor_humidity.git
