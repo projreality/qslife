@@ -10,3 +10,6 @@
 [submodule "lib/olr_importer_nonin_ppg"]
 	path = lib/olr_importer_nonin_ppg
 	url = /var/lib/git/olr_importer_nonin_ppg.git
+[submodule "lib/olr_importer_esensor_temperature"]
+	path = lib/olr_importer_esensor_temperature
+	url = /var/lib/git/olr_importer_esensor_temperature.git
