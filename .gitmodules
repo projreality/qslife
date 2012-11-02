@@ -25,3 +25,6 @@
 [submodule "lib/olr_importer_zeo_sleep_stage"]
 	path = lib/olr_importer_zeo_sleep_stage
 	url = /var/lib/git/olr_importer_zeo_sleep_stage.git
+[submodule "lib/olr_importer_gwf_burn"]
+	path = lib/olr_importer_gwf_burn
+	url = /var/lib/git/olr_importer_gwf_burn.git
