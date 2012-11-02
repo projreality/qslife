@@ -31,3 +31,6 @@
 [submodule "lib/olr_importer_gwf_sleep"]
 	path = lib/olr_importer_gwf_sleep
 	url = /var/lib/git/olr_importer_gwf_sleep.git
+[submodule "lib/olr_importer_gwf_step"]
+	path = lib/olr_importer_gwf_step
+	url = /var/lib/git/olr_importer_gwf_step.git
