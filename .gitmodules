@@ -34,3 +34,6 @@
 [submodule "lib/olr_importer_gwf_step"]
 	path = lib/olr_importer_gwf_step
 	url = /var/lib/git/olr_importer_gwf_step.git
+[submodule "lib/olr_importer_location"]
+	path = lib/olr_importer_location
+	url = /var/lib/git/olr_importer_location.git
