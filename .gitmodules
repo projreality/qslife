@@ -40,3 +40,6 @@
 [submodule "lib/olr_importer_sht15_temp"]
 	path = lib/olr_importer_sht15_temp
 	url = /var/lib/git/olr_importer_sht15_temp.git
+[submodule "lib/olr_importer_sht15_hum"]
+	path = lib/olr_importer_sht15_hum
+	url = /var/lib/git/olr_importer_sht15_hum.git
