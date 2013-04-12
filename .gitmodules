@@ -37,3 +37,6 @@
 [submodule "lib/olr_importer_location"]
 	path = lib/olr_importer_location
 	url = /var/lib/git/olr_importer_location.git
+[submodule "lib/olr_importer_sht15_temp"]
+	path = lib/olr_importer_sht15_temp
+	url = /var/lib/git/olr_importer_sht15_temp.git
