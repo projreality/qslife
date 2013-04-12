@@ -49,3 +49,6 @@
 [submodule "lib/olr_importer_sen12945p"]
 	path = lib/olr_importer_sen12945p
 	url = /var/lib/git/olr_importer_sen12945p.git
+[submodule "lib/olr_importer_sen32357p"]
+	path = lib/olr_importer_sen32357p
+	url = /var/lib/git/olr_importer_sen32357p.git
