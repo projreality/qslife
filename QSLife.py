@@ -21,6 +21,7 @@ from matplotlib.figure import Figure;
 
 from GraphWindow import GraphWindow;
 from GraphWindow import GraphDropTarget;
+from HDFQS import *;
 
 class QSLife(wx.Frame):
 
@@ -150,6 +151,8 @@ class QSLife(wx.Frame):
     else:
       self.tree.DeleteAllItems();
 
+    self.hdfqs = HDFQS(path);
+    self.graphs.set_hdfqs(self.hdfqs);
     self.populate_tree();
 
 ################################################################################
@@ -157,15 +160,15 @@ class QSLife(wx.Frame):
 ################################################################################
   def populate_tree(self):
     self.tree.AddRoot("/");
-    fd = openFile(self.current_file + "/index.h5", mode="r");
     root = self.tree.GetRootItem();
     self.tree.SetItemHasChildren(root);
-    for item in fd.root:
-      tree_item = self.tree.AppendItem(root, item._v_name);
-      for subitem in item:
-	self.tree.AppendItem(tree_item, subitem._v_name);
+    groups = { };
+    for path in self.hdfqs.manifest.keys():
+      [ x, group_name, table_name ] = path.split("/");
+      if (not groups.has_key(group_name)):
+        groups[group_name] = self.tree.AppendItem(root, group_name);
+      self.tree.AppendItem(groups[group_name], table_name);
     self.tree.Expand(root);
-    fd.close();
 
 ################################################################################
 ################################# EVENT HANDLERS ###############################
@@ -182,7 +185,7 @@ class QSLife(wx.Frame):
 	  return;
       else:
 	os.mkdir(path);
-      HDFQS(path + "/index.h5");
+      HDFQS.initialize_file(path + "/index.h5");
       self.load_file(path);
       self.statusbar.SetStatusText("Created new file \"" + path + "\"");
     self.onFileSaveAs(e);
