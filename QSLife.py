@@ -242,7 +242,7 @@ class QSLife(wx.Frame):
       path = dialog.GetPath();
       if (os.path.exists(path)):
 	importer = self.importers[e.GetId()];
-	i = importer(self.current_file);
+	i = importer();
 	i.import_data(path);
 	self.load_file(self.current_file);
 
