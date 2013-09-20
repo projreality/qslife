@@ -305,8 +305,11 @@ class GraphWindow(matplotlib.backends.backend_wxagg.FigureCanvasWxAgg):
 	subplot.plot(t, val);
       subplot.get_axes().set_xlim(self.options["time_range"]);
       entry = self.graph_config[i];
-      result = re.search("^/([A-Za-z0-9]+)/([A-Za-z0-9]+)_([A-Za-z0-9]+)$", entry["node"]).groups();
-      subplot.set_ylabel(result[1] + "\n" + result[2]);
+      result = re.search("^/([A-Za-z0-9]+)/([A-Za-z0-9]+)(_([A-Za-z0-9]+))?$", entry["node"]).groups();
+      if (result[3] is not None):
+        subplot.set_ylabel(result[1] + "\n" + result[3]);
+      else:
+        subplot.set_ylabel(result[1] + "\n");
       ax = subplot.get_axes();
       ax.set_xticks(ticks);
       ax.set_xticklabels(labels);
