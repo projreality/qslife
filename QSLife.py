@@ -21,6 +21,7 @@ from matplotlib.figure import Figure;
 
 from GraphWindow import GraphWindow;
 from GraphWindow import GraphDropTarget;
+from HDFQS import *;
 
 class QSLife(wx.Frame):
 
@@ -182,7 +183,7 @@ class QSLife(wx.Frame):
 	  return;
       else:
 	os.mkdir(path);
-      HDFQS(path + "/index.h5");
+      HDFQS.initialize_file(path + "/index.h5");
       self.load_file(path);
       self.statusbar.SetStatusText("Created new file \"" + path + "\"");
     self.onFileSaveAs(e);
