@@ -151,6 +151,7 @@ class QSLife(wx.Frame):
     else:
       self.tree.DeleteAllItems();
 
+    self.hdfqs = HDFQS(path);
     self.populate_tree();
 
 ################################################################################
@@ -158,15 +159,15 @@ class QSLife(wx.Frame):
 ################################################################################
   def populate_tree(self):
     self.tree.AddRoot("/");
-    fd = openFile(self.current_file + "/index.h5", mode="r");
     root = self.tree.GetRootItem();
     self.tree.SetItemHasChildren(root);
-    for item in fd.root:
-      tree_item = self.tree.AppendItem(root, item._v_name);
-      for subitem in item:
-	self.tree.AppendItem(tree_item, subitem._v_name);
+    groups = { };
+    for path in self.hdfqs.manifest.keys():
+      [ x, group_name, table_name ] = path.split("/");
+      if (not groups.has_key(group_name)):
+        groups[group_name] = self.tree.AppendItem(root, group_name);
+      self.tree.AppendItem(groups[group_name], table_name);
     self.tree.Expand(root);
-    fd.close();
 
 ################################################################################
 ################################# EVENT HANDLERS ###############################
