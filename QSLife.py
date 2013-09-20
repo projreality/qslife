@@ -5,11 +5,17 @@ import sys;
 from tables import *;
 import wx;
 
+for path in os.listdir("lib"):
+  sys.path.append("lib/" + path);
+
+for path in os.listdir("lib"):
+  for subpath in os.listdir("lib/" + path):
+    if (subpath[-3:] == ".py"):
+      exec("from " + subpath[:-3] + " import *;");
+
 matplotlib.interactive(True);
 matplotlib.use("WXAgg");
-sys.path.append("lib/olr_import");
 
-import init;
 from matplotlib.backends.backend_wxagg import FigureCanvasWxAgg;
 from matplotlib.figure import Figure;
 
@@ -34,6 +40,8 @@ class QSLife(wx.Frame):
     self.create_menubar();
     self.window = wx.SplitterWindow(self, wx.ID_ANY, style=wx.SP_3D);
     self.gui_miscellaneous_setup();
+
+    self.tree = None;
 
 ################################################################################
 ################################ CREATE MENUBAR ################################
@@ -60,6 +68,18 @@ class QSLife(wx.Frame):
     self.Bind(wx.EVT_MENU, self.onFileSaveAs, menu_file_save_as);
     self.Bind(wx.EVT_MENU, self.onFileExit, menu_file_exit);
 
+################################## IMPORT MENU #################################
+    # Structure
+    menu_import = wx.Menu();
+
+    self.importers = { };
+    for importer in Importer.__subclasses__():
+      menu_item = menu_import.AppendItem(wx.MenuItem(menu_import, wx.ID_ANY, importer.name + "\tCtrl+I"));
+      self.importers[menu_item.GetId()] = importer;
+      self.Bind(wx.EVT_MENU, self.onImport, menu_item);
+
+    menubar.Append(menu_import, "&Import");
+
 ################################ FINISH MENUBAR ################################
     self.SetMenuBar(menubar);
 
@@ -68,7 +88,6 @@ class QSLife(wx.Frame):
 ################################################################################
   def create_window(self):
     self.tree = wx.TreeCtrl(self.window, wx.ID_ANY);
-    self.tree.AddRoot("/");
     panel = wx.Panel(self.window, style=wx.NO_FULL_REPAINT_ON_RESIZE);
     self.window.SplitVertically(self.tree, panel, 300);
 
@@ -125,11 +144,20 @@ class QSLife(wx.Frame):
     self.current_file = path;
     self.SetTitle(path);
 
-    self.create_window();
-    self.graphs.set_current_file(self.current_file);
+    if (self.tree == None):
+      self.create_window();
+      self.graphs.set_current_file(self.current_file);
+    else:
+      self.tree.DeleteAllItems();
 
-    # Populate tree
-    fd = openFile(path, mode="r");
+    self.populate_tree();
+
+################################################################################
+################################# POPULATE TREE ################################
+################################################################################
+  def populate_tree(self):
+    self.tree.AddRoot("/");
+    fd = openFile(self.current_file + "/index.h5", mode="r");
     root = self.tree.GetRootItem();
     self.tree.SetItemHasChildren(root);
     for item in fd.root:
@@ -145,15 +173,19 @@ class QSLife(wx.Frame):
 
 #################################### FILE NEW ##################################
   def onFileNew(self, e):
-    dialog = wx.FileDialog(None, "New HDFQS file ...", ".", style=wx.FD_SAVE, wildcard="*.h5");
+    dialog = wx.FileDialog(None, "New HDFQS file group...", ".", style=wx.FD_SAVE);
     if (dialog.ShowModal() == wx.ID_OK):
       path = dialog.GetPath();
       if (os.path.exists(path)):
 	dialog = wx.MessageDialog(None, "File \"" + path + "\" exists - overwrite?", "Confirm", wx.YES_NO);
-	if (dialog.ShowModal() == wx.ID_YES):
-	  init.init(path);
-	  self.load_file(path);
-	  self.statusbar.SetStatusText("Created new file \"" + path + "\"");
+	if (dialog.ShowModal() != wx.ID_YES):
+	  return;
+      else:
+	os.mkdir(path);
+      HDFQS(path + "/index.h5");
+      self.load_file(path);
+      self.statusbar.SetStatusText("Created new file \"" + path + "\"");
+    self.onFileSaveAs(e);
 
 ################################### FILE OPEN ##################################
   def onFileOpen(self, e):
@@ -199,6 +231,17 @@ class QSLife(wx.Frame):
 ################################### FILE EXIT ##################################
   def onFileExit(self, e):
     self.Close();
+
+#################################### IMPORT ####################################
+  def onImport(self, e):
+    dialog = wx.FileDialog(None, "Import...", ".", style=wx.FD_OPEN);
+    if (dialog.ShowModal() == wx.ID_OK):
+      path = dialog.GetPath();
+      if (os.path.exists(path)):
+	importer = self.importers[e.GetId()];
+	i = importer(self.current_file);
+	i.import_data(path);
+	self.load_file(self.current_file);
 
 ################################### DRAG INIT ##################################
   def onDragInit(self, e):

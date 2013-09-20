@@ -2,6 +2,7 @@ import calendar;
 from math import *;
 import matplotlib;
 from numpy import *;
+import os;
 import re;
 from tables import *;
 import threading;
@@ -29,8 +30,8 @@ class GraphWindow(matplotlib.backends.backend_wxagg.FigureCanvasWxAgg):
     self.options["clip"] = 1000;
     self.options["current_file"] = None;
     self.graph_config = [ ]; # List of data to graph
-    self.options["num_visible_graphs"] = 0;
-    self.options["time_range"] = ( 0, 0 ); # time range to display data
+    self.options["num_visible_graphs"] = 6;
+    self.options["time_range"] = ( 0, 60000 ); # time range to display data
     self.options["timezone"] = 0;
     self.options["selected_graph"] = None;
     self.options["top_graph"] = 0;
@@ -123,6 +124,10 @@ class GraphWindow(matplotlib.backends.backend_wxagg.FigureCanvasWxAgg):
 
   def set_graph_config(self, graph_config):
     self.graph_config = graph_config;
+    with self.lock_data:
+      self.data = [ ];
+      for i in range(len(self.graph_config)):
+	self.data.append(transpose(array([ [ ], [ ] ])));
     return self;
 
 ################################################################################
@@ -196,10 +201,12 @@ class GraphWindow(matplotlib.backends.backend_wxagg.FigureCanvasWxAgg):
 ################################################################################
 ################################## LOAD DATA ###################################
 ################################################################################
-  def load_data(self):
+  def load_data(self, force=False):
     load = False;
     gap = self.options["time_range"][1] - self.options["time_range"][0];
-    if ((self.data == None) or (self.data_range == None)):
+    if (force):
+      load = True;
+    elif ((self.data == None) or (self.data_range == None)):
       load = True;
     elif (len(self.graph_config) == 0):
       load = False;
@@ -210,17 +217,51 @@ class GraphWindow(matplotlib.backends.backend_wxagg.FigureCanvasWxAgg):
 	load = False;
     if (load):
       temp_data = [ ];
-      fd = openFile(self.options["current_file"], mode="r");
-      for i in arange(len(self.graph_config)):
-        entry = self.graph_config[i];
-        x = ma.array([ [ data[entry["time"]], data[entry["value"]] ] for data in fd.getNode(entry["node"]).where("(time >= " + str(self.options["time_range"][0] - gap*1.5) + ") & (time <= " + str(self.options["time_range"][1] + gap*1.5) + ")") ]);
-	mask_expr = self.graph_config[i]["valid"];
-	if (mask_expr != ""):
-	  val = ma.masked_where(~eval(mask_expr), x);
+      for i in range(len(self.graph_config)):
+	temp_data.append(transpose(array([ [ ], [ ] ])));
+      temp = time.gmtime(self.options["time_range"][0]/1000);
+      year = temp[0];
+      month = temp[1];
+      temp = time.gmtime(self.options["time_range"][1]/1000);
+      stop_year = temp[0];
+      stop_month = temp[1];
+      while True:
+	month_str = str(month);
+	if (month < 10):
+	  month_str = "0" + month_str;
+	filename = self.options["current_file"] + "/" + str(year) + month_str + ".h5";
+	if (os.path.exists(filename)):
+	  fd = openFile(filename, mode="r");
+	  for i in arange(len(self.graph_config)):
+	    entry = self.graph_config[i];
+	    try:
+	      x = ma.array([ [ data[entry["time"]], data[entry["value"]] ] for data in fd.getNode(entry["node"]).where("(time >= " + str(self.options["time_range"][0] - gap*1.5) + ") & (time <= " + str(self.options["time_range"][1] + gap*1.5) + ")") ]);
+	      if (x.shape != ( 0, )):
+		mask_expr = self.graph_config[i]["valid"];
+		if (mask_expr != ""):
+		  t = x[:,0];
+		  x = x[:,1];
+		  x = ma.masked_where(~eval(mask_expr), x);
+		  val = ma.concatenate(( t[:,newaxis], x[:,newaxis] ), axis=1);
+		else:
+		  val = x;
+	      else:
+		val = x;
+	    except (NoSuchNodeError):
+	      val = ma.array([ ]);
+	    if (temp_data[i].shape == ( 0, 2 )):
+	      temp_data[i] = val;
+	    else:
+	      temp_data[i] = concatenate(( temp_data[i], val ));
+	      
+	  fd.close();
+	if ((year == stop_year) and (month == stop_month)):
+	  break;
+	if (month < 12):
+	  month = month + 1;
 	else:
-	  val = x;
-        temp_data.append(val);
-      fd.close();
+	  year = year + 1;
+	  month = 1;
       self.data_range = (self.options["time_range"][0] - gap*1.5, self.options["time_range"][1] + gap*1.5);
 
       with self.lock_data:
@@ -233,7 +274,7 @@ class GraphWindow(matplotlib.backends.backend_wxagg.FigureCanvasWxAgg):
 ##################################### UPDATE ###################################
 ################################################################################
   def update(self):
-    if (self.options["current_file"] == None):
+    if ((self.options["current_file"] == None) or (self.data == None)):
       return;
 
     # Condition for when time range is outside of range of available data, but still doing a GUI update
@@ -251,11 +292,14 @@ class GraphWindow(matplotlib.backends.backend_wxagg.FigureCanvasWxAgg):
       if (i >= self.options["num_visible_graphs"]):
         break;
       subplot = self.figure.add_subplot(self.options["num_visible_graphs"], 1, i + 1 - self.options["top_graph"]);
-      t = data[i][:,0];
-      val = data[i][:,1];
-      disp = (t >= self.options["time_range"][0]) & (t <= self.options["time_range"][1]);
-      t = t[disp];
-      val = val[disp];
+      if (len(data[i]) == 0):
+	val = array([]);
+      else:
+	t = data[i][:,0];
+	val = data[i][:,1];
+	disp = (t >= self.options["time_range"][0]) & (t <= self.options["time_range"][1]);
+	t = t[disp];
+	val = val[disp];
 
       if (len(val) != 0):
 	subplot.plot(t, val);
@@ -293,11 +337,15 @@ class GraphWindow(matplotlib.backends.backend_wxagg.FigureCanvasWxAgg):
       gap = self.options["time_range"][1] - self.options["time_range"][0];
       self.options["time_range"] = ( self.options["time_range"][0] - gap/2, self.options["time_range"][1] - gap/2 );
       self.update();
+      with self.condition_load_data:
+	self.condition_load_data.notify();
     # Move right
     elif ((key_code == wx.WXK_NUMPAD_RIGHT) or (key_code == wx.WXK_NUMPAD6) or (key_code == wx.WXK_RIGHT)):
       gap = self.options["time_range"][1] - self.options["time_range"][0];
       self.options["time_range"] = ( self.options["time_range"][0] + gap/2, self.options["time_range"][1] + gap/2 );
       self.update();
+      with self.condition_load_data:
+	self.condition_load_data.notify();
     elif ((key_code == wx.WXK_NUMPAD_UP) or (key_code == wx.WXK_NUMPAD8) or (key_code == wx.WXK_UP)):
       if (self.options["top_graph"] > 0):
 	self.options["top_graph"] = self.options["top_graph"] - 1;
@@ -309,18 +357,20 @@ class GraphWindow(matplotlib.backends.backend_wxagg.FigureCanvasWxAgg):
     elif (key_code == wx.WXK_NUMPAD_ENTER):
       dialog = GraphOptionsDialog(self, None, title="Graph Options - " + self.graph_config[self.options["selected_graph"]]["node"]);
       if (dialog.ShowModal() == wx.ID_OK):
-	reload = False;
 	mask_expr = dialog.masking.GetValue();
 	if (self.graph_config[self.options["selected_graph"]]["valid"] != mask_expr):
-	  reload = True;
-	  self.graph_config[self.options["selected_graph"]]["valid"] = dialog.masking.GetValue();
+	  self.graph_config[self.options["selected_graph"]]["valid"] = mask_expr;
+	  x = self.data[self.options["selected_graph"]];
+	  x.mask = False;
+	  if (mask_expr != ""):
+	    t = x[:,0];
+	    x = x[:,1];
+	    x = ma.masked_where(~eval(mask_expr), x);
+	    self.data[self.options["selected_graph"]] = ma.concatenate(( t[:,newaxis], x[:,newaxis] ), axis=1);
 	ymin = float(dialog.ymin.GetValue());
 	ymax = float(dialog.ymax.GetValue());
 	self.graph_config[self.options["selected_graph"]]["yscale"] = ( ymin, ymax );
-	if (reload):
-	  self.load_data();
-	else:
-	  self.update();
+	self.update();
       dialog.Destroy();
     elif (key_code == wx.WXK_DELETE):
       if (self.options["selected_graph"] != None):
@@ -357,13 +407,14 @@ class GraphWindow(matplotlib.backends.backend_wxagg.FigureCanvasWxAgg):
 	t = temp_data[self.options["selected_graph"]][:,0];
 	disp = (t >= self.options["time_range"][0]) & (t <= self.options["time_range"][1]);
 	data = temp_data[self.options["selected_graph"]][:,1][disp];
-	y_min = data.min();
-	y_max = data.max();
-	y_range = y_max - y_min;
-	y_min = floor(y_min - y_range * 0.15);
-	y_max = ceil(y_max + y_range * 0.15);
-	self.graph_config[self.options["selected_graph"]]["yscale"] = ( y_min, y_max );
-	self.update();
+	if (data.shape != ( 0, )):
+	  y_min = data.min();
+	  y_max = data.max();
+	  y_range = y_max - y_min;
+	  y_min = floor(y_min - y_range * 0.15);
+	  y_max = ceil(y_max + y_range * 0.15);
+	  self.graph_config[self.options["selected_graph"]]["yscale"] = ( y_min, y_max );
+	  self.update();
     else:
       e.Skip();
 

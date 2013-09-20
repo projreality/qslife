@@ -1,3 +1,54 @@
-[submodule "lib/olr_import"]
-	path = lib/olr_import
-	url = /var/lib/git/olr_import.git
+[submodule "lib/hdfqs"]
+	path = lib/hdfqs
+	url = /var/lib/git/hdfqs.git
+[submodule "lib/olr_importer"]
+	path = lib/olr_importer
+	url = /var/lib/git/olr_importer.git
+[submodule "lib/olr_importer_nonin"]
+	path = lib/olr_importer_nonin
+	url = /var/lib/git/olr_importer_nonin.git
+[submodule "lib/olr_importer_nonin_ppg"]
+	path = lib/olr_importer_nonin_ppg
+	url = /var/lib/git/olr_importer_nonin_ppg.git
+[submodule "lib/olr_importer_esensor_temperature"]
+	path = lib/olr_importer_esensor_temperature
+	url = /var/lib/git/olr_importer_esensor_temperature.git
+[submodule "lib/olr_importer_esensor_humidity"]
+	path = lib/olr_importer_esensor_humidity
+	url = /var/lib/git/olr_importer_esensor_humidity.git
+[submodule "lib/olr_importer_esensor_color"]
+	path = lib/olr_importer_esensor_color
+	url = /var/lib/git/olr_importer_esensor_color.git
+[submodule "lib/olr_importer_zeo"]
+	path = lib/olr_importer_zeo
+	url = /var/lib/git/olr_importer_zeo.git
+[submodule "lib/olr_importer_zeo_sleep_stage"]
+	path = lib/olr_importer_zeo_sleep_stage
+	url = /var/lib/git/olr_importer_zeo_sleep_stage.git
+[submodule "lib/olr_importer_gwf_burn"]
+	path = lib/olr_importer_gwf_burn
+	url = /var/lib/git/olr_importer_gwf_burn.git
+[submodule "lib/olr_importer_gwf_sleep"]
+	path = lib/olr_importer_gwf_sleep
+	url = /var/lib/git/olr_importer_gwf_sleep.git
+[submodule "lib/olr_importer_gwf_step"]
+	path = lib/olr_importer_gwf_step
+	url = /var/lib/git/olr_importer_gwf_step.git
+[submodule "lib/olr_importer_location"]
+	path = lib/olr_importer_location
+	url = /var/lib/git/olr_importer_location.git
+[submodule "lib/olr_importer_sht15_temp"]
+	path = lib/olr_importer_sht15_temp
+	url = /var/lib/git/olr_importer_sht15_temp.git
+[submodule "lib/olr_importer_sht15_hum"]
+	path = lib/olr_importer_sht15_hum
+	url = /var/lib/git/olr_importer_sht15_hum.git
+[submodule "lib/olr_importer_sen10171p"]
+	path = lib/olr_importer_sen10171p
+	url = /var/lib/git/olr_importer_sen10171p.git
+[submodule "lib/olr_importer_sen12945p"]
+	path = lib/olr_importer_sen12945p
+	url = /var/lib/git/olr_importer_sen12945p.git
+[submodule "lib/olr_importer_sen32357p"]
+	path = lib/olr_importer_sen32357p
+	url = /var/lib/git/olr_importer_sen32357p.git
