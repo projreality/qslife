@@ -152,6 +152,7 @@ class QSLife(wx.Frame):
       self.tree.DeleteAllItems();
 
     self.hdfqs = HDFQS(path);
+    self.graphs.set_hdfqs(self.hdfqs);
     self.populate_tree();
 
 ################################################################################

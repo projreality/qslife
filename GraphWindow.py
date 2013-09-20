@@ -131,6 +131,12 @@ class GraphWindow(matplotlib.backends.backend_wxagg.FigureCanvasWxAgg):
     return self;
 
 ################################################################################
+################################## SET HDFQS ###################################
+################################################################################
+  def set_hdfqs(self, hdfqs):
+    self.hdfqs = hdfqs;
+
+################################################################################
 ################################# INSERT GRAPH ################################
 ################################################################################
   def add_graph(self, pos, config):
@@ -216,52 +222,29 @@ class GraphWindow(matplotlib.backends.backend_wxagg.FigureCanvasWxAgg):
       else:
 	load = False;
     if (load):
+      print "LOAD";
       temp_data = [ ];
       for i in range(len(self.graph_config)):
-	temp_data.append(transpose(array([ [ ], [ ] ])));
-      temp = time.gmtime(self.options["time_range"][0]/1000);
-      year = temp[0];
-      month = temp[1];
-      temp = time.gmtime(self.options["time_range"][1]/1000);
-      stop_year = temp[0];
-      stop_month = temp[1];
-      while True:
-	month_str = str(month);
-	if (month < 10):
-	  month_str = "0" + month_str;
-	filename = self.options["current_file"] + "/" + str(year) + month_str + ".h5";
-	if (os.path.exists(filename)):
-	  fd = openFile(filename, mode="r");
-	  for i in arange(len(self.graph_config)):
-	    entry = self.graph_config[i];
-	    try:
-	      x = ma.array([ [ data[entry["time"]], data[entry["value"]] ] for data in fd.getNode(entry["node"]).where("(time >= " + str(self.options["time_range"][0] - gap*1.5) + ") & (time <= " + str(self.options["time_range"][1] + gap*1.5) + ")") ]);
-	      if (x.shape != ( 0, )):
-		mask_expr = self.graph_config[i]["valid"];
-		if (mask_expr != ""):
-		  t = x[:,0];
-		  x = x[:,1];
-		  x = ma.masked_where(~eval(mask_expr), x);
-		  val = ma.concatenate(( t[:,newaxis], x[:,newaxis] ), axis=1);
-		else:
-		  val = x;
-	      else:
-		val = x;
-	    except (NoSuchNodeError):
-	      val = ma.array([ ]);
-	    if (temp_data[i].shape == ( 0, 2 )):
-	      temp_data[i] = val;
-	    else:
-	      temp_data[i] = concatenate(( temp_data[i], val ));
+        temp_data.append(transpose(array([ [ ], [ ] ])))
+      for i in arange(len(self.graph_config)):
+        entry = self.graph_config[i];
+        x = self.hdfqs.load(entry["node"], self.options["time_range"][0] - gap*1.5, self.options["time_range"][1] + gap*1.5);
+        if (x.shape != ( 0, )):
+          mask_expr = self.graph_config[i]["valid"];
+          if (mask_expr != ""):
+            t = x[:,0];
+            x = x[:,1];
+            x = ma.masked_where(~eval(mask_expr), x);
+            val = ma.concatenate(( t[:,newaxis], x[:,newaxis] ), axis=1);
+          else:
+            val = x;
+        else:
+          val = x;
+        if (temp_data[i].shape == ( 0, 2 )):
+          temp_data[i] = val;
+        else:
+          temp_data[i] = concatenate(( temp_data[i], val ));
 	      
-	  fd.close();
-	if ((year == stop_year) and (month == stop_month)):
-	  break;
-	if (month < 12):
-	  month = month + 1;
-	else:
-	  year = year + 1;
-	  month = 1;
       self.data_range = (self.options["time_range"][0] - gap*1.5, self.options["time_range"][1] + gap*1.5);
 
       with self.lock_data:
