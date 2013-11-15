@@ -22,6 +22,9 @@ class GraphWindow(matplotlib.backends.backend_wxagg.FigureCanvasWxAgg):
     size = tuple(parent.GetClientSize());
     self.SetSize(size);
     self.figure.set_size_inches(float(size[0])/self.figure.get_dpi(), float(size[1])/self.figure.get_dpi());
+    subplot = self.figure.add_subplot(1, 1, 1, visible=False);
+    bb = subplot.get_window_extent().transformed(self.figure.dpi_scale_trans.inverted());
+    self.figure_width = int(bb.width * self.figure.dpi);
 
     self.Bind(wx.EVT_KEY_DOWN, self.onKeyDown);
     self.Bind(wx.EVT_MOUSEWHEEL, self.onMouseWheel);
@@ -43,15 +46,9 @@ class GraphWindow(matplotlib.backends.backend_wxagg.FigureCanvasWxAgg):
 
     self.lock_data = threading.Lock();
 
-    self.condition_load_data = threading.Condition();
-
     self.EVTTYPE_UPDATE = wx.NewEventType();
     self.EVT_UPDATE = wx.PyEventBinder(self.EVTTYPE_UPDATE, 1);
     self.Bind(self.EVT_UPDATE, self.onUpdate);
-
-    load_data_thread = threading.Thread(target=self.loop_load_data);
-    load_data_thread.daemon = True;
-    load_data_thread.start();
 
 ################################################################################
 ################################### ON UPDATE ##################################
@@ -150,10 +147,6 @@ class GraphWindow(matplotlib.backends.backend_wxagg.FigureCanvasWxAgg):
 
     self.update();
 
-    with self.condition_load_data:
-      self.data_range = None;
-      self.condition_load_data.notify();
-
 ################################################################################
 ############################### GET/SET TOP GRAPH ##############################
 ################################################################################
@@ -217,10 +210,7 @@ class GraphWindow(matplotlib.backends.backend_wxagg.FigureCanvasWxAgg):
     elif (len(self.graph_config) == 0):
       load = False;
     else:
-      if ((self.data_range[0] > self.options["time_range"][0] - gap*0.5) or (self.data_range[1] < self.options["time_range"][1] + gap*0.5)):
-	load = True;
-      else:
-	load = False;
+      load = True;
     if (load):
       print "LOAD";
       temp_data = [ ];
@@ -228,7 +218,7 @@ class GraphWindow(matplotlib.backends.backend_wxagg.FigureCanvasWxAgg):
         temp_data.append(transpose(array([ [ ], [ ] ])))
       for i in arange(len(self.graph_config)):
         entry = self.graph_config[i];
-        x = self.hdfqs.load(entry["node"], self.options["time_range"][0] - gap*1.5, self.options["time_range"][1] + gap*1.5);
+        x = self.hdfqs.load(entry["node"], self.options["time_range"][0], self.options["time_range"][1], self.figure_width);
         if (x.shape != ( 0, )):
           mask_expr = self.graph_config[i]["valid"];
           if (mask_expr != ""):
@@ -264,6 +254,7 @@ class GraphWindow(matplotlib.backends.backend_wxagg.FigureCanvasWxAgg):
     if ((self.data_range == None) or (self.options["time_range"][0] < self.data_range[0]) or (self.options["time_range"][1] > self.data_range[1])):
       pass;
 
+    print "UPDATE";
     self.figure.clear();
 
     ( ticks, labels ) = self.create_time_labels();
@@ -286,6 +277,7 @@ class GraphWindow(matplotlib.backends.backend_wxagg.FigureCanvasWxAgg):
 
       if (len(val) != 0):
 	subplot.plot(t, val);
+
       subplot.get_axes().set_xlim(self.options["time_range"]);
       entry = self.graph_config[i];
       result = re.search("^/([A-Za-z0-9]+)/([A-Za-z0-9_]+)(_([A-Za-z0-9]+))?$", entry["node"]).groups();
@@ -310,28 +302,22 @@ class GraphWindow(matplotlib.backends.backend_wxagg.FigureCanvasWxAgg):
     if (key_code == wx.WXK_NUMPAD_ADD):
       gap = self.options["time_range"][1] - self.options["time_range"][0];
       self.options["time_range"] = ( self.options["time_range"][0] + gap/4, self.options["time_range"][1] - gap/4 );
-      self.update();
+      self.load_data();
     # Zoom out
     elif (key_code == wx.WXK_NUMPAD_SUBTRACT):
       gap = self.options["time_range"][1] - self.options["time_range"][0];
       self.options["time_range"] = ( self.options["time_range"][0] - gap/2, self.options["time_range"][1] + gap/2 );
-      self.update();
-      with self.condition_load_data:
-	self.condition_load_data.notify();
+      self.load_data();
     # Move left
     elif ((key_code == wx.WXK_NUMPAD_LEFT) or (key_code == wx.WXK_NUMPAD4) or (key_code == wx.WXK_LEFT)):
       gap = self.options["time_range"][1] - self.options["time_range"][0];
       self.options["time_range"] = ( self.options["time_range"][0] - gap/2, self.options["time_range"][1] - gap/2 );
-      self.update();
-      with self.condition_load_data:
-	self.condition_load_data.notify();
+      self.load_data();
     # Move right
     elif ((key_code == wx.WXK_NUMPAD_RIGHT) or (key_code == wx.WXK_NUMPAD6) or (key_code == wx.WXK_RIGHT)):
       gap = self.options["time_range"][1] - self.options["time_range"][0];
       self.options["time_range"] = ( self.options["time_range"][0] + gap/2, self.options["time_range"][1] + gap/2 );
-      self.update();
-      with self.condition_load_data:
-	self.condition_load_data.notify();
+      self.load_data();
     elif ((key_code == wx.WXK_NUMPAD_UP) or (key_code == wx.WXK_NUMPAD8) or (key_code == wx.WXK_UP)):
       if (self.options["top_graph"] > 0):
 	self.options["top_graph"] = self.options["top_graph"] - 1;
@@ -458,17 +444,6 @@ class GraphWindow(matplotlib.backends.backend_wxagg.FigureCanvasWxAgg):
       i = i + 1;
 
     return ( ticks, labels );
-
-################################################################################
-################################## LOAD DATA ###################################
-################################################################################
-  def loop_load_data(self):
-    while True:
-      with self.condition_load_data:
-	while True:
-	  self.condition_load_data.wait();
-	  time.sleep(1);
-	  self.load_data();
 
 ################################################################################
 ############################### GRAPH DROP TARGET ##############################
