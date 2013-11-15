@@ -264,7 +264,7 @@ class QSLife(wx.Frame):
     parent = self.tree.GetItemParent(item);
     if ((item == root) or (parent == root)):
       return;
-    source = "/" + self.tree.GetItemText(parent) + "/" + self.tree.GetItemText(item);
+    source = "/" + self.tree.GetItemText(self.tree.GetItemParent(parent)) + "/" + self.tree.GetItemText(parent) + "/" + self.tree.GetItemText(item);
     tdo = wx.TextDataObject(source);
     tds = wx.DropSource(self.tree);
     tds.SetData(tdo);

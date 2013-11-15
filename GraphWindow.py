@@ -145,7 +145,7 @@ class GraphWindow(matplotlib.backends.backend_wxagg.FigureCanvasWxAgg):
     with self.lock_data:
       self.data.append(transpose(array([ [ ], [ ] ])));
 
-    self.update();
+    self.load_data();
 
 ################################################################################
 ############################### GET/SET TOP GRAPH ##############################
