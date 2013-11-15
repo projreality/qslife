@@ -66,7 +66,7 @@ class GraphWindow(matplotlib.backends.backend_wxagg.FigureCanvasWxAgg):
     top = 86; # Offset from top and bottom
     bottom = 75;
     sel = int(floor((y - top) / (max_y - top - bottom) * self.options["num_visible_graphs"] + self.options["top_graph"]));
-    if ((sel >= 0) and (sel < self.options["num_visible_graphs"])):
+    if ((sel >= self.options["top_graph"]) and ((sel - self.options["top_graph"]) < self.options["num_visible_graphs"])):
       self.options["selected_graph"] = sel;
     else:
       self.options["selected_graph"] = None;
@@ -257,11 +257,18 @@ class GraphWindow(matplotlib.backends.backend_wxagg.FigureCanvasWxAgg):
 
     ( ticks, labels ) = self.create_time_labels();
 
+    start_date = time.strftime("%m/%d/%Y", time.gmtime(self.options["time_range"][0]/1000 + self.options["timezone"]*3600));
+    stop_date = time.strftime("%m/%d/%Y", time.gmtime(self.options["time_range"][1]/1000 + self.options["timezone"]*3600));
+    if (start_date == stop_date):
+      date_label = "\n" + start_date;
+    else:
+      date_label = "\n" + start_date + " - " + stop_date;
+
     num = len(self.graph_config);
     with self.lock_data:
       data = list(self.data);
     for i in arange(self.options["top_graph"], num):
-      if (i >= self.options["num_visible_graphs"]):
+      if ((i - self.options["top_graph"]) >= self.options["num_visible_graphs"]):
         break;
       subplot = self.figure.add_subplot(self.options["num_visible_graphs"], 1, i + 1 - self.options["top_graph"]);
       if (len(data[i]) == 0):
@@ -278,9 +285,9 @@ class GraphWindow(matplotlib.backends.backend_wxagg.FigureCanvasWxAgg):
 
       subplot.get_axes().set_xlim(self.options["time_range"]);
       entry = self.graph_config[i];
-      result = re.search("^/([A-Za-z0-9]+)/([A-Za-z0-9_]+)(_([A-Za-z0-9]+))?$", entry["node"]).groups();
+      result = re.search("^/([A-Za-z0-9]+)/([A-Za-z0-9_]+?)(_([A-Za-z0-9]+))?$", entry["node"]).groups();
       if (result[3] is not None):
-        subplot.set_ylabel(result[1] + "\n" + result[3]);
+        subplot.set_ylabel(result[1] + "\n" + result[3], multialignment="center");
       else:
         subplot.set_ylabel(result[1] + "\n");
       ax = subplot.get_axes();
@@ -288,6 +295,10 @@ class GraphWindow(matplotlib.backends.backend_wxagg.FigureCanvasWxAgg):
       ax.set_xticklabels(labels);
       ax.set_ylim(entry["yscale"]);
 
+    try:
+      subplot.set_xlabel(date_label);
+    except UnboundLocalError:
+      pass;
     self.draw();
 
 ################################################################################
