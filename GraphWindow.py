@@ -212,7 +212,6 @@ class GraphWindow(matplotlib.backends.backend_wxagg.FigureCanvasWxAgg):
     else:
       load = True;
     if (load):
-      print "LOAD";
       temp_data = [ ];
       for i in range(len(self.graph_config)):
         temp_data.append(transpose(array([ [ ], [ ] ])))
@@ -254,7 +253,6 @@ class GraphWindow(matplotlib.backends.backend_wxagg.FigureCanvasWxAgg):
     if ((self.data_range == None) or (self.options["time_range"][0] < self.data_range[0]) or (self.options["time_range"][1] > self.data_range[1])):
       pass;
 
-    print "UPDATE";
     self.figure.clear();
 
     ( ticks, labels ) = self.create_time_labels();
