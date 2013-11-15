@@ -257,6 +257,13 @@ class GraphWindow(matplotlib.backends.backend_wxagg.FigureCanvasWxAgg):
 
     ( ticks, labels ) = self.create_time_labels();
 
+    start_date = time.strftime("%m/%d/%Y", time.gmtime(self.options["time_range"][0]/1000 + self.options["timezone"]*3600));
+    stop_date = time.strftime("%m/%d/%Y", time.gmtime(self.options["time_range"][1]/1000 + self.options["timezone"]*3600));
+    if (start_date == stop_date):
+      date_label = "\n" + start_date;
+    else:
+      date_label = "\n" + start_date + " - " + stop_date;
+
     num = len(self.graph_config);
     with self.lock_data:
       data = list(self.data);
@@ -278,9 +285,9 @@ class GraphWindow(matplotlib.backends.backend_wxagg.FigureCanvasWxAgg):
 
       subplot.get_axes().set_xlim(self.options["time_range"]);
       entry = self.graph_config[i];
-      result = re.search("^/([A-Za-z0-9]+)/([A-Za-z0-9_]+)(_([A-Za-z0-9]+))?$", entry["node"]).groups();
+      result = re.search("^/([A-Za-z0-9]+)/([A-Za-z0-9_]+?)(_([A-Za-z0-9]+))?$", entry["node"]).groups();
       if (result[3] is not None):
-        subplot.set_ylabel(result[1] + "\n" + result[3]);
+        subplot.set_ylabel(result[1] + "\n" + result[3], multialignment="center");
       else:
         subplot.set_ylabel(result[1] + "\n");
       ax = subplot.get_axes();
@@ -288,6 +295,10 @@ class GraphWindow(matplotlib.backends.backend_wxagg.FigureCanvasWxAgg):
       ax.set_xticklabels(labels);
       ax.set_ylim(entry["yscale"]);
 
+    try:
+      subplot.set_xlabel(date_label);
+    except UnboundLocalError:
+      pass;
     self.draw();
 
 ################################################################################
