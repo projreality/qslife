@@ -66,7 +66,7 @@ class GraphWindow(matplotlib.backends.backend_wxagg.FigureCanvasWxAgg):
     top = 86; # Offset from top and bottom
     bottom = 75;
     sel = int(floor((y - top) / (max_y - top - bottom) * self.options["num_visible_graphs"] + self.options["top_graph"]));
-    if ((sel >= 0) and (sel < self.options["num_visible_graphs"])):
+    if ((sel >= self.options["top_graph"]) and ((sel - self.options["top_graph"]) < self.options["num_visible_graphs"])):
       self.options["selected_graph"] = sel;
     else:
       self.options["selected_graph"] = None;
@@ -261,7 +261,7 @@ class GraphWindow(matplotlib.backends.backend_wxagg.FigureCanvasWxAgg):
     with self.lock_data:
       data = list(self.data);
     for i in arange(self.options["top_graph"], num):
-      if (i >= self.options["num_visible_graphs"]):
+      if ((i - self.options["top_graph"]) >= self.options["num_visible_graphs"]):
         break;
       subplot = self.figure.add_subplot(self.options["num_visible_graphs"], 1, i + 1 - self.options["top_graph"]);
       if (len(data[i]) == 0):
