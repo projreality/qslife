@@ -167,14 +167,18 @@ class QSLife(wx.Frame):
     self.tree.AddRoot("/");
     root = self.tree.GetRootItem();
     self.tree.SetItemHasChildren(root);
+    locations = { };
     groups = { };
     for path in self.hdfqs.manifest.keys():
       if (path == "FILES"):
         continue;
-      [ x, group_name, table_name ] = path.split("/");
-      if (not groups.has_key(group_name)):
-        groups[group_name] = self.tree.AppendItem(root, group_name);
-      self.tree.AppendItem(groups[group_name], table_name);
+      [ x, location_name, group_name, table_name ] = path.split("/");
+      if (not locations.has_key(location_name)):
+        locations[location_name] = self.tree.AppendItem(root, location_name);
+        groups[location_name] = { };
+      if (not groups[location_name].has_key(group_name)):
+        groups[location_name][group_name] = self.tree.AppendItem(locations[location_name], group_name);
+      self.tree.AppendItem(groups[location_name][group_name], table_name);
     self.tree.Expand(root);
 
 ################################################################################
