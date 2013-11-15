@@ -169,7 +169,7 @@ class QSLife(wx.Frame):
     self.tree.SetItemHasChildren(root);
     locations = { };
     groups = { };
-    for path in self.hdfqs.manifest.keys():
+    for path in sorted(self.hdfqs.manifest.keys()):
       if (path == "FILES"):
         continue;
       [ x, location_name, group_name, table_name ] = path.split("/");
