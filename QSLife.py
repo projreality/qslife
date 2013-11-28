@@ -172,7 +172,10 @@ class QSLife(wx.Frame):
     for path in sorted(self.hdfqs.manifest.keys()):
       if (path == "FILES"):
         continue;
-      [ x, location_name, group_name, table_name ] = path.split("/");
+      try:
+        [ x, location_name, group_name, table_name ] = path.split("/");
+      except ValueError:
+        continue;
       if (not locations.has_key(location_name)):
         locations[location_name] = self.tree.AppendItem(root, location_name);
         groups[location_name] = { };
