@@ -167,14 +167,21 @@ class QSLife(wx.Frame):
     self.tree.AddRoot("/");
     root = self.tree.GetRootItem();
     self.tree.SetItemHasChildren(root);
+    locations = { };
     groups = { };
-    for path in self.hdfqs.manifest.keys():
+    for path in sorted(self.hdfqs.manifest.keys()):
       if (path == "FILES"):
         continue;
-      [ x, group_name, table_name ] = path.split("/");
-      if (not groups.has_key(group_name)):
-        groups[group_name] = self.tree.AppendItem(root, group_name);
-      self.tree.AppendItem(groups[group_name], table_name);
+      try:
+        [ x, location_name, group_name, table_name ] = path.split("/");
+      except ValueError:
+        continue;
+      if (not locations.has_key(location_name)):
+        locations[location_name] = self.tree.AppendItem(root, location_name);
+        groups[location_name] = { };
+      if (not groups[location_name].has_key(group_name)):
+        groups[location_name][group_name] = self.tree.AppendItem(locations[location_name], group_name);
+      self.tree.AppendItem(groups[location_name][group_name], table_name);
     self.tree.Expand(root);
 
 ################################################################################
@@ -260,7 +267,7 @@ class QSLife(wx.Frame):
     parent = self.tree.GetItemParent(item);
     if ((item == root) or (parent == root)):
       return;
-    source = "/" + self.tree.GetItemText(parent) + "/" + self.tree.GetItemText(item);
+    source = "/" + self.tree.GetItemText(self.tree.GetItemParent(parent)) + "/" + self.tree.GetItemText(parent) + "/" + self.tree.GetItemText(item);
     tdo = wx.TextDataObject(source);
     tds = wx.DropSource(self.tree);
     tds.SetData(tdo);
