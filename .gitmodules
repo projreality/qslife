@@ -1,30 +1,3 @@
 [submodule "lib/hdfqs"]
 	path = lib/hdfqs
 	url = /var/lib/git/hdfqs.git
-[submodule "lib/olr_importer"]
-	path = lib/olr_importer
-	url = /var/lib/git/olr_importer.git
-[submodule "lib/olr_importer_nonin"]
-	path = lib/olr_importer_nonin
-	url = /var/lib/git/olr_importer_nonin.git
-[submodule "lib/olr_importer_nonin_ppg"]
-	path = lib/olr_importer_nonin_ppg
-	url = /var/lib/git/olr_importer_nonin_ppg.git
-[submodule "lib/olr_importer_zeo"]
-	path = lib/olr_importer_zeo
-	url = /var/lib/git/olr_importer_zeo.git
-[submodule "lib/olr_importer_zeo_sleep_stage"]
-	path = lib/olr_importer_zeo_sleep_stage
-	url = /var/lib/git/olr_importer_zeo_sleep_stage.git
-[submodule "lib/olr_importer_gwf_burn"]
-	path = lib/olr_importer_gwf_burn
-	url = /var/lib/git/olr_importer_gwf_burn.git
-[submodule "lib/olr_importer_gwf_sleep"]
-	path = lib/olr_importer_gwf_sleep
-	url = /var/lib/git/olr_importer_gwf_sleep.git
-[submodule "lib/olr_importer_gwf_step"]
-	path = lib/olr_importer_gwf_step
-	url = /var/lib/git/olr_importer_gwf_step.git
-[submodule "lib/olr_importer_location"]
-	path = lib/olr_importer_location
-	url = /var/lib/git/olr_importer_location.git
