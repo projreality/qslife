@@ -281,6 +281,9 @@ class GraphWindow(matplotlib.backends.backend_wxagg.FigureCanvasWxAgg):
 	val = val[disp];
 
       if (len(val) != 0):
+        valid = hstack(( True, diff(t) > 0 ));
+        t = t[valid];
+        val = val[valid];
 	subplot.plot(t, val);
 
       subplot.get_axes().set_xlim(self.options["time_range"]);
