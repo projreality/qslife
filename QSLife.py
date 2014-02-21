@@ -69,18 +69,6 @@ class QSLife(wx.Frame):
     self.Bind(wx.EVT_MENU, self.onFileSaveAs, menu_file_save_as);
     self.Bind(wx.EVT_MENU, self.onFileExit, menu_file_exit);
 
-################################## IMPORT MENU #################################
-    # Structure
-    menu_import = wx.Menu();
-
-    self.importers = { };
-    for importer in Importer.__subclasses__():
-      menu_item = menu_import.AppendItem(wx.MenuItem(menu_import, wx.ID_ANY, importer.name + "\tCtrl+I"));
-      self.importers[menu_item.GetId()] = importer;
-      self.Bind(wx.EVT_MENU, self.onImport, menu_item);
-
-    menubar.Append(menu_import, "&Import");
-
 ################################ FINISH MENUBAR ################################
     self.SetMenuBar(menubar);
 
