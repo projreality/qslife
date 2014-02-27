@@ -371,11 +371,22 @@ class GraphWindow(matplotlib.backends.backend_wxagg.FigureCanvasWxAgg):
 
       if (result == wx.ID_OK):
 	length = self.options["time_range"][1] - self.options["time_range"][0];
-	center_tuple = time.strptime(dialog.text_field.GetValue(), "%m/%d/%Y %H:%M:%S");
-	center = (calendar.timegm(center_tuple) - self.options["timezone"] * 3600) * 1000;
-	self.options["time_range"] = ( center - length/2, center + length/2 );
-	self.update();
-	self.load_data();
+        try:
+	  center_tuple = time.strptime(dialog.text_field.GetValue(), "%m/%d/%Y %H:%M:%S");
+        except ValueError:
+          try:
+	    center_tuple = time.strptime(dialog.text_field.GetValue(), "%m/%d/%Y %H:%M");
+          except ValueError:
+            try:
+	      center_tuple = time.strptime(dialog.text_field.GetValue(), "%m/%d/%Y");
+            except ValueError:
+              center_tuple = None;
+
+        if (center_tuple is not None):
+	  center = (calendar.timegm(center_tuple) - self.options["timezone"] * 3600) * 1000;
+	  self.options["time_range"] = ( center - length/2, center + length/2 );
+	  self.update();
+	  self.load_data();
 
       dialog.Destroy();
     # Autoscale Y
