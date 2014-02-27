@@ -531,6 +531,9 @@ class GraphOptionsDialog(wx.Dialog):
     if (key_code == wx.WXK_ESCAPE):
       self.EndModal(wx.ID_CANCEL);
       self.Close();
+    elif (key_code == wx.WXK_NUMPAD_ENTER):
+      self.EndModal(wx.ID_OK);
+      self.Close();
     else:
       e.Skip();
 
