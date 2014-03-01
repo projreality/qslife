@@ -78,7 +78,12 @@ class GraphWindow(matplotlib.backends.backend_wxagg.FigureCanvasWxAgg):
       marker = { };
       marker["time"] = int(dialog.time.GetValue()) - self.options["timezone"] * 3600000;
       marker["label"] = dialog.label.GetValue();
+      marker["color"] = "#FF0000";
       self.markers.append(marker);
+      for subplot in self.plots:
+        self.draw_marker_line(subplot, marker);
+      self.draw_marker_text(self.plots[-1], marker);
+      self.draw();
 
   def select_graph(self, e):
     ( max_x, max_y ) = self.GetSize();
@@ -298,6 +303,7 @@ class GraphWindow(matplotlib.backends.backend_wxagg.FigureCanvasWxAgg):
     num = len(self.graph_config);
     with self.lock_data:
       data = list(self.data);
+    self.plots = [ ];
     for i in arange(self.options["top_graph"], num):
       if ((i - self.options["top_graph"]) >= self.options["num_visible_graphs"]):
         break;
@@ -329,11 +335,28 @@ class GraphWindow(matplotlib.backends.backend_wxagg.FigureCanvasWxAgg):
       ax.set_xticklabels(labels);
       ax.set_ylim(entry["yscale"]);
 
+      for marker in self.markers:
+        self.draw_marker_line(subplot, marker);
+
+      self.plots.append(subplot);
+
+    for marker in self.markers:
+      self.draw_marker_text(subplot, marker);
     try:
       subplot.set_xlabel(date_label);
     except UnboundLocalError:
       pass;
     self.draw();
+
+  def draw_marker_line(self, subplot, marker):
+    subplot.axvline(x=marker["time"], ymin=-1000000, ymax=1000000, c=marker["color"], zorder=0, clip_on=False);
+
+  def draw_marker_text(self, subplot, marker):
+    xlim = subplot.get_axes().get_xlim();
+    x = marker["time"] + (xlim[1] - xlim[0]) / 100;
+    ylim = subplot.get_axes().get_ylim();
+    y = ylim[0] - (ylim[1] - ylim[0])/1.2;
+    self.plots[-1].text(x, y, marker["label"], color=marker["color"], zorder=0, clip_on=False);
 
 ################################################################################
 #################################### KEY DOWN ##################################
