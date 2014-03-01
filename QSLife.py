@@ -110,6 +110,7 @@ class QSLife(wx.Frame):
       self.load_file(self.current_file);
     self.graphs.set_options(temp["options"]);
     self.graphs.set_graph_config(temp["graph_config"]);
+    self.graphs.set_graph_markers(temp["markers"]);
     self.graphs.load_data();
     self.current_config = path;
     self.save_config(path);
@@ -125,6 +126,7 @@ class QSLife(wx.Frame):
       fd = open(path, "w");
       fd.write("graph_config = " + repr(self.graphs.get_graph_config()) + "\n");
       fd.write("options = " + repr(self.graphs.get_options()) + "\n");
+      fd.write("markers = " + repr(self.graphs.markers) + "\n");
       fd.write("manifest = " + repr(self.hdfqs.manifest) + "\n");
       fd.close();
       self.SetStatusText("Saved configuration file \"" + path + "\"");

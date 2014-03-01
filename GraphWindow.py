@@ -35,6 +35,7 @@ class GraphWindow(matplotlib.backends.backend_wxagg.FigureCanvasWxAgg):
     self.options["clip"] = 1000;
     self.options["current_file"] = None;
     self.graph_config = [ ]; # List of data to graph
+    self.markers = [ ];
     self.options["num_visible_graphs"] = 6;
     self.options["time_range"] = ( 0, 60000 ); # time range to display data
     self.options["timezone"] = 0;
@@ -73,7 +74,11 @@ class GraphWindow(matplotlib.backends.backend_wxagg.FigureCanvasWxAgg):
     stop = self.options["time_range"][1];
     marker_time = (stop - start) * pos + start;
     dialog = CreateMarkerDialog(marker_time + self.options["timezone"] * 3600000, None, title="New Marker");
-    dialog.ShowModal();
+    if (dialog.ShowModal() == wx.ID_OK):
+      marker = { };
+      marker["time"] = int(dialog.time.GetValue()) - self.options["timezone"] * 3600000;
+      marker["label"] = dialog.label.GetValue();
+      self.markers.append(marker);
 
   def select_graph(self, e):
     ( max_x, max_y ) = self.GetSize();
@@ -142,6 +147,15 @@ class GraphWindow(matplotlib.backends.backend_wxagg.FigureCanvasWxAgg):
       for i in range(len(self.graph_config)):
 	self.data.append(transpose(array([ [ ], [ ] ])));
     return self;
+
+################################################################################
+############################ GET/SET GRAPH MARKERS #############################
+################################################################################
+  def get_graph_markers(self):
+    return self.markers;
+
+  def set_graph_markers(self, markers):
+    self.markers = markers;
 
 ################################################################################
 ################################## SET HDFQS ###################################
@@ -356,7 +370,7 @@ class GraphWindow(matplotlib.backends.backend_wxagg.FigureCanvasWxAgg):
 	self.options["top_graph"] = self.options["top_graph"] + 1;
 	self.update();
     elif (key_code == wx.WXK_NUMPAD_ENTER):
-      dialog = GraphOptionsDialog(None, title="Graph Options - " + self.graph_config[self.options["selected_graph"]]["node"]);
+      dialog = GraphOptionsDialog(self, None, title="Graph Options - " + self.graph_config[self.options["selected_graph"]]["node"]);
       if (dialog.ShowModal() == wx.ID_OK):
 	mask_expr = dialog.masking.GetValue();
 	if (self.graph_config[self.options["selected_graph"]]["valid"] != mask_expr):
@@ -658,5 +672,21 @@ class CreateMarkerDialog(wx.Dialog):
       self.EndModal(wx.ID_CANCEL);
       self.Close();
     elif ((key_code == wx.WXK_RETURN) or (key_code == wx.WXK_NUMPAD_ENTER)):
-      self.EndModal(wx.ID_OK);
-      self.Close();
+      try:
+        marker_time = time.strptime(self.time.GetValue(), "%m/%d/%Y %H:%M:%S");
+      except ValueError:
+        try:
+          marker_time = time.strptime(self.time.GetValue(), "%m/%d/%Y %H:%M");
+        except ValueError:
+          try:
+            marker_time = time.strptime(self.time.GetValue(), "%m/%d/%Y");
+          except:
+            marker_time = None;
+
+      marker_time = calendar.timegm(marker_time) * 1000;
+      if (marker_time is not None):
+        self.time.SetValue(str(marker_time));
+        self.EndModal(wx.ID_OK);
+        self.Close();
+    else:
+      e.Skip();
