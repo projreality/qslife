@@ -2,6 +2,7 @@ import calendar;
 from math import *;
 import matplotlib;
 from numpy import *;
+from operator import itemgetter;
 import os;
 import re;
 from tables import *;
@@ -229,6 +230,7 @@ class GraphWindow(matplotlib.backends.backend_wxagg.FigureCanvasWxAgg):
             val = x;
         else:
           val = x;
+        val = array(sorted(val.tolist(), key=itemgetter(0)));
         if (temp_data[i].shape == ( 0, 2 )):
           temp_data[i] = val;
         else:
