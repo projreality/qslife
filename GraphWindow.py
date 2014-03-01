@@ -64,9 +64,26 @@ class GraphWindow(matplotlib.backends.backend_wxagg.FigureCanvasWxAgg):
 ################################################################################
   def onClick(self, e):
     if (e.guiEvent.LeftDClick()):
-      self.create_marker(e);
+      closest_marker = self.find_nearby_marker(e.x - self.figure_x);
+      if (closest_marker is None):
+        self.create_marker(e);
+      else:
+        self.edit_marker(closest_marker);
     else:
       self.select_graph(e);
+
+  def find_nearby_marker(self, x):
+    start = self.options["time_range"][0];
+    stop = self.options["time_range"][1];
+    closest_marker = None;
+    closest_x = 5;
+    for marker in self.markers:
+      marker_x = np.round(float(marker["time"] - start) / (stop - start) * self.figure_width); # pixel X position of marker
+      if (np.abs(marker_x - x) < closest_x):
+        closest_x = x;
+        closest_marker = marker;
+
+    return closest_marker;
 
   def create_marker(self, e):
     pos = (e.x - self.figure_x) / self.figure_width;
@@ -76,6 +93,18 @@ class GraphWindow(matplotlib.backends.backend_wxagg.FigureCanvasWxAgg):
     dialog = CreateMarkerDialog(marker_time + self.options["timezone"] * 3600000, None, title="New Marker");
     if (dialog.ShowModal() == wx.ID_OK):
       marker = { };
+      marker["time"] = int(dialog.time.GetValue()) - self.options["timezone"] * 3600000;
+      marker["label"] = dialog.label.GetValue();
+      marker["color"] = "#FF0000";
+      self.markers.append(marker);
+      for subplot in self.plots:
+        self.draw_marker_line(subplot, marker);
+      self.draw_marker_text(self.plots[-1], marker);
+      self.draw();
+
+  def edit_marker(self, marker):
+    dialog = CreateMarkerDialog(marker["time"] + self.options["timezone"] * 3600000, None, title="Edit Marker", marker=marker);
+    if (dialog.ShowModal() == wx.ID_OK):
       marker["time"] = int(dialog.time.GetValue()) - self.options["timezone"] * 3600000;
       marker["label"] = dialog.label.GetValue();
       marker["color"] = "#FF0000";
@@ -664,10 +693,15 @@ class GoToTimeDialog(wx.Dialog):
 class CreateMarkerDialog(wx.Dialog):
 
   def __init__(self, marker_time, *args, **kwargs):
+    if (kwargs.has_key("marker")):
+      marker = kwargs.pop("marker");
+    else:
+      marker = { "time": marker_time, "label": "", "color": "#FF0000" };
+
     super(CreateMarkerDialog, self).__init__(*args, **kwargs);
 
     panel = wx.Panel(self);
-    box = wx.StaticBox(panel, label="Create Marker");
+    box = wx.StaticBox(panel, label="Marker");
     box_sizer = wx.StaticBoxSizer(box, wx.VERTICAL);
     sizer = wx.GridBagSizer(2, 2);
 
@@ -677,6 +711,7 @@ class CreateMarkerDialog(wx.Dialog):
     sizer.Add(self.time, pos=( 0, 1 ));
     sizer.Add(wx.StaticText(panel, label="Label"), pos=( 1, 0 ), border=4);
     self.label = wx.TextCtrl(panel, size=( 150, -1));
+    self.label.SetValue(marker["label"]);
     sizer.Add(self.label, pos=( 1, 1 ));
 
     self.time.Bind(wx.EVT_KEY_DOWN, self.on_key_down);
