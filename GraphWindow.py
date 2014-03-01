@@ -2,6 +2,7 @@ import calendar;
 from math import *;
 import matplotlib;
 from numpy import *;
+from operator import itemgetter;
 import os;
 import re;
 from tables import *;
@@ -217,7 +218,7 @@ class GraphWindow(matplotlib.backends.backend_wxagg.FigureCanvasWxAgg):
         temp_data.append(transpose(array([ [ ], [ ] ])))
       for i in arange(len(self.graph_config)):
         entry = self.graph_config[i];
-        x = self.hdfqs.load(entry["node"], self.options["time_range"][0], self.options["time_range"][1], self.figure_width);
+        x = self.hdfqs.load(entry["node"], self.options["time_range"][0], self.options["time_range"][1], self.figure_width, entry["time"], entry["value"]);
         if (x.shape != ( 0, )):
           mask_expr = self.graph_config[i]["valid"];
           if (mask_expr != ""):
@@ -229,6 +230,7 @@ class GraphWindow(matplotlib.backends.backend_wxagg.FigureCanvasWxAgg):
             val = x;
         else:
           val = x;
+        val = array(sorted(val.tolist(), key=itemgetter(0)));
         if (temp_data[i].shape == ( 0, 2 )):
           temp_data[i] = val;
         else:
@@ -353,6 +355,10 @@ class GraphWindow(matplotlib.backends.backend_wxagg.FigureCanvasWxAgg):
 	    self.data[self.options["selected_graph"]] = ma.concatenate(( t[:,newaxis], x[:,newaxis] ), axis=1);
 	ymin = float(dialog.ymin.GetValue());
 	ymax = float(dialog.ymax.GetValue());
+        new_value = dialog.value_field.GetStringSelection();
+        if (self.graph_config[self.options["selected_graph"]]["value"] != new_value):
+          self.graph_config[self.options["selected_graph"]]["value"] = new_value;
+          self.load_data(True);
 	self.graph_config[self.options["selected_graph"]]["yscale"] = ( ymin, ymax );
 	self.update();
       dialog.Destroy();
@@ -371,11 +377,22 @@ class GraphWindow(matplotlib.backends.backend_wxagg.FigureCanvasWxAgg):
 
       if (result == wx.ID_OK):
 	length = self.options["time_range"][1] - self.options["time_range"][0];
-	center_tuple = time.strptime(dialog.text_field.GetValue(), "%m/%d/%Y %H:%M:%S");
-	center = (calendar.timegm(center_tuple) - self.options["timezone"] * 3600) * 1000;
-	self.options["time_range"] = ( center - length/2, center + length/2 );
-	self.update();
-	self.load_data();
+        try:
+	  center_tuple = time.strptime(dialog.text_field.GetValue(), "%m/%d/%Y %H:%M:%S");
+        except ValueError:
+          try:
+	    center_tuple = time.strptime(dialog.text_field.GetValue(), "%m/%d/%Y %H:%M");
+          except ValueError:
+            try:
+	      center_tuple = time.strptime(dialog.text_field.GetValue(), "%m/%d/%Y");
+            except ValueError:
+              center_tuple = None;
+
+        if (center_tuple is not None):
+	  center = (calendar.timegm(center_tuple) - self.options["timezone"] * 3600) * 1000;
+	  self.options["time_range"] = ( center - length/2, center + length/2 );
+	  self.update();
+	  self.load_data();
 
       dialog.Destroy();
     # Autoscale Y
@@ -482,7 +499,7 @@ class GraphOptionsDialog(wx.Dialog):
 
     self.create_gui();
 
-    self.SetSize(( 380, 175 ));
+    self.SetSize(( 390, 185 ));
 
   def create_gui(self):
     panel = wx.Panel(self);
@@ -490,26 +507,35 @@ class GraphOptionsDialog(wx.Dialog):
     box_sizer = wx.StaticBoxSizer(box, wx.VERTICAL);
     sizer = wx.GridBagSizer(5, 5);
 
-    sizer.Add(wx.StaticText(panel, label="Valid condition"), pos=( 0, 0 ), flag=wx.LEFT | wx.TOP, border=4)
+    sizer.Add(wx.StaticText(panel, label="Value field"), pos=( 0, 0 ), flag=wx.LEFT | wx.TOP, border=4);
+    fields = self._parent.hdfqs.get_fields(self._parent.graph_config[self._parent.options["selected_graph"]]["node"]);
+    fields.remove("time");
+    fields.sort();
+    self.value_field = wx.Choice(panel);
+    self.value_field.SetItems(fields);
+    self.value_field.SetStringSelection(self._parent.graph_config[self._parent.options["selected_graph"]]["value"]);
+    sizer.Add(self.value_field, pos=( 0, 1 ), border=4);
+
+    sizer.Add(wx.StaticText(panel, label="Valid condition"), pos=( 1, 0 ), border=4)
 
     self.masking = wx.TextCtrl(panel, size=( 250, -1 ));
     self.masking.SetValue(self._parent.graph_config[self._parent.options["selected_graph"]]["valid"]);
     self.masking.Bind(wx.EVT_KEY_DOWN, self.onKeyDown);
-    sizer.Add(self.masking, pos=( 0, 1 ), span=( 1, 3) );
+    sizer.Add(self.masking, pos=( 1, 1 ), span=( 1, 3) );
 
-    sizer.Add(wx.StaticText(panel, label="Y min"), pos=( 1, 0 ), flag=wx.LEFT | wx.TOP, border=4);
+    sizer.Add(wx.StaticText(panel, label="Y min"), pos=( 2, 0 ), border=4);
 
     self.ymin = wx.TextCtrl(panel, size=( 75, -1 ));
     self.ymin.SetValue(str(self._parent.graph_config[self._parent.options["selected_graph"]]["yscale"][0]));
     self.ymin.Bind(wx.EVT_KEY_DOWN, self.onKeyDown);
-    sizer.Add(self.ymin, pos=( 1, 1 ), span=( 1, 1 ));
+    sizer.Add(self.ymin, pos=( 2, 1 ), span=( 1, 1 ));
 
-    sizer.Add(wx.StaticText(panel, label="Y max"), pos=( 2, 0 ), flag=wx.LEFT | wx.TOP, border=4);
+    sizer.Add(wx.StaticText(panel, label="Y max"), pos=( 3, 0 ), flag=wx.LEFT | wx.TOP, border=4);
 
     self.ymax = wx.TextCtrl(panel, size=( 75, -1 ));
     self.ymax.SetValue(str(self._parent.graph_config[self._parent.options["selected_graph"]]["yscale"][1]));
     self.ymax.Bind(wx.EVT_KEY_DOWN, self.onKeyDown);
-    sizer.Add(self.ymax, pos=( 2, 1 ), span=( 1, 1 ));
+    sizer.Add(self.ymax, pos=( 3, 1 ), span=( 1, 1 ));
 
     ok_button = wx.Button(panel, label="OK");
     ok_button.Bind(wx.EVT_BUTTON, self.onOk);
@@ -530,6 +556,9 @@ class GraphOptionsDialog(wx.Dialog):
 
     if (key_code == wx.WXK_ESCAPE):
       self.EndModal(wx.ID_CANCEL);
+      self.Close();
+    elif (key_code == wx.WXK_NUMPAD_ENTER):
+      self.EndModal(wx.ID_OK);
       self.Close();
     else:
       e.Skip();
