@@ -26,6 +26,7 @@ class GraphWindow(matplotlib.backends.backend_wxagg.FigureCanvasWxAgg):
     subplot = self.figure.add_subplot(1, 1, 1, visible=False);
     bb = subplot.get_window_extent().transformed(self.figure.dpi_scale_trans.inverted());
     self.figure_width = int(bb.width * self.figure.dpi);
+    self.figure_x = bb.xmin * self.figure.dpi;
 
     self.Bind(wx.EVT_KEY_DOWN, self.onKeyDown);
     self.Bind(wx.EVT_MOUSEWHEEL, self.onMouseWheel);
@@ -61,6 +62,20 @@ class GraphWindow(matplotlib.backends.backend_wxagg.FigureCanvasWxAgg):
 ################################### ON CLICK ###################################
 ################################################################################
   def onClick(self, e):
+    if (e.guiEvent.LeftDClick()):
+      self.create_marker(e);
+    else:
+      self.select_graph(e);
+
+  def create_marker(self, e):
+    pos = (e.x - self.figure_x) / self.figure_width;
+    start = self.options["time_range"][0];
+    stop = self.options["time_range"][1];
+    marker_time = (stop - start) * pos + start;
+    dialog = CreateMarkerDialog(marker_time + self.options["timezone"] * 3600000, None, title="New Marker");
+    dialog.ShowModal();
+
+  def select_graph(self, e):
     ( max_x, max_y ) = self.GetSize();
     x = e.x;
     y = max_y - e.y;
@@ -341,7 +356,7 @@ class GraphWindow(matplotlib.backends.backend_wxagg.FigureCanvasWxAgg):
 	self.options["top_graph"] = self.options["top_graph"] + 1;
 	self.update();
     elif (key_code == wx.WXK_NUMPAD_ENTER):
-      dialog = GraphOptionsDialog(self, None, title="Graph Options - " + self.graph_config[self.options["selected_graph"]]["node"]);
+      dialog = GraphOptionsDialog(None, title="Graph Options - " + self.graph_config[self.options["selected_graph"]]["node"]);
       if (dialog.ShowModal() == wx.ID_OK):
 	mask_expr = dialog.masking.GetValue();
 	if (self.graph_config[self.options["selected_graph"]]["valid"] != mask_expr):
@@ -605,3 +620,43 @@ class GoToTimeDialog(wx.Dialog):
       self.Close();
     else:
       e.Skip();
+
+################################################################################
+############################# CREATE MARKER DIALOG #############################
+################################################################################
+class CreateMarkerDialog(wx.Dialog):
+
+  def __init__(self, marker_time, *args, **kwargs):
+    super(CreateMarkerDialog, self).__init__(*args, **kwargs);
+
+    panel = wx.Panel(self);
+    box = wx.StaticBox(panel, label="Create Marker");
+    box_sizer = wx.StaticBoxSizer(box, wx.VERTICAL);
+    sizer = wx.GridBagSizer(2, 2);
+
+    sizer.Add(wx.StaticText(panel, label="Time"), pos=( 0, 0 ), flag=wx.LEFT | wx.TOP, border=4);
+    self.time = wx.TextCtrl(panel, size=( 150, -1 ));
+    self.time.SetValue(time.strftime("%m/%d/%Y %H:%M:%S", time.gmtime(np.floor(marker_time/1000))));
+    sizer.Add(self.time, pos=( 0, 1 ));
+    sizer.Add(wx.StaticText(panel, label="Label"), pos=( 1, 0 ), border=4);
+    self.label = wx.TextCtrl(panel, size=( 150, -1));
+    sizer.Add(self.label, pos=( 1, 1 ));
+
+    self.time.Bind(wx.EVT_KEY_DOWN, self.on_key_down);
+    self.label.Bind(wx.EVT_KEY_DOWN, self.on_key_down);
+
+    box_sizer.Add(sizer);
+    panel.SetSizer(box_sizer);
+    self.SetSize(( 202, 78 ));
+
+    self.label.SetFocus();
+
+  def on_key_down(self, e):
+    key_code = e.GetKeyCode();
+
+    if (key_code == wx.WXK_ESCAPE):
+      self.EndModal(wx.ID_CANCEL);
+      self.Close();
+    elif ((key_code == wx.WXK_RETURN) or (key_code == wx.WXK_NUMPAD_ENTER)):
+      self.EndModal(wx.ID_OK);
+      self.Close();
