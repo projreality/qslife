@@ -84,7 +84,6 @@ class GraphWindow(matplotlib.backends.backend_wxagg.FigureCanvasWxAgg):
     if (self.selected_marker is not None):
       t = self.x_to_time(e.x);
       time_range = self.options["time_range"];
-      #if (np.abs(self.selected_marker["time"] - t) > ((time_range[1] - time_range[0] ) / 50)):
       self.move_marker(self.selected_marker, self.x_to_time(e.x));
 
   def move_marker(self, marker, t):
@@ -93,8 +92,6 @@ class GraphWindow(matplotlib.backends.backend_wxagg.FigureCanvasWxAgg):
       del l;
     self.marker_lines[marker["label"]] = [ ];
     marker["time"] = t;
-    #e = wx.PyCommandEvent(self.EVTTYPE_UPDATE, wx.ID_ANY);
-    #wx.PostEvent(self, e);
     for subplot in self.plots:
       self.draw_marker_line(subplot, marker);
     self.draw_marker_text(self.plots[-1], marker);
@@ -498,22 +495,12 @@ class GraphWindow(matplotlib.backends.backend_wxagg.FigureCanvasWxAgg):
 
       if (result == wx.ID_OK):
 	length = self.options["time_range"][1] - self.options["time_range"][0];
-        try:
-	  center_tuple = time.strptime(dialog.text_field.GetValue(), "%m/%d/%Y %H:%M:%S");
-        except ValueError:
-          try:
-	    center_tuple = time.strptime(dialog.text_field.GetValue(), "%m/%d/%Y %H:%M");
-          except ValueError:
-            try:
-	      center_tuple = time.strptime(dialog.text_field.GetValue(), "%m/%d/%Y");
-            except ValueError:
-              center_tuple = None;
 
-        if (center_tuple is not None):
-	  center = (calendar.timegm(center_tuple) - self.options["timezone"] * 3600) * 1000;
-	  self.options["time_range"] = ( center - length/2, center + length/2 );
-	  self.update();
-	  self.load_data();
+        t = int(dialog.text_field.GetValue());
+	center = (t - self.options["timezone"] * 3600) * 1000;
+	self.options["time_range"] = ( center - length/2, center + length/2 );
+	self.update();
+	self.load_data();
 
       dialog.Destroy();
     # Autoscale Y
@@ -678,7 +665,7 @@ class GraphOptionsDialog(wx.Dialog):
     if (key_code == wx.WXK_ESCAPE):
       self.EndModal(wx.ID_CANCEL);
       self.Close();
-    elif (key_code == wx.WXK_NUMPAD_ENTER):
+    elif ((key_code == wx.WXK_RETURN) or (key_code == wx.WXK_NUMPAD_ENTER)):
       self.EndModal(wx.ID_OK);
       self.Close();
     else:
@@ -722,8 +709,23 @@ class GoToTimeDialog(wx.Dialog):
       self.EndModal(wx.ID_CANCEL);
       self.Close();
     elif ((key_code == wx.WXK_RETURN) or (key_code == wx.WXK_NUMPAD_ENTER)):
-      self.EndModal(wx.ID_OK);
-      self.Close();
+      try:
+        center_tuple = time.strptime(self.text_field.GetValue(), "%m/%d/%Y %H:%M:%S");
+      except ValueError:
+        try:
+          center_tuple = time.strptime(self.text_field.GetValue(), "%m/%d/%Y %H:%M");
+        except ValueError:
+          try:
+	    center_tuple = time.strptime(self.text_field.GetValue(), "%m/%d/%Y");
+          except ValueError:
+            center_tuple = None;
+
+      if (center_tuple is None):
+        wx.MessageBox("Invalid time", "Error", wx.OK | wx.ICON_ERROR);
+      else:
+        self.text_field.SetValue(str(calendar.timegm(center_tuple)));
+        self.EndModal(wx.ID_OK);
+        self.Close();
     else:
       e.Skip();
 
