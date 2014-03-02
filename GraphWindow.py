@@ -36,6 +36,7 @@ class GraphWindow(matplotlib.backends.backend_wxagg.FigureCanvasWxAgg):
     self.options["current_file"] = None;
     self.graph_config = [ ]; # List of data to graph
     self.markers = [ ];
+    self.selected_marker = None;
     self.options["num_visible_graphs"] = 6;
     self.options["time_range"] = ( 0, 60000 ); # time range to display data
     self.options["timezone"] = 0;
@@ -46,6 +47,8 @@ class GraphWindow(matplotlib.backends.backend_wxagg.FigureCanvasWxAgg):
     self.data_range = None;
 
     self.mpl_connect("button_press_event", self.onClick);
+    self.mpl_connect("button_release_event", self.onRelease);
+    self.mpl_connect("motion_notify_event", self.onMouseMove);
 
     self.lock_data = threading.Lock();
 
@@ -63,14 +66,30 @@ class GraphWindow(matplotlib.backends.backend_wxagg.FigureCanvasWxAgg):
 ################################### ON CLICK ###################################
 ################################################################################
   def onClick(self, e):
+    closest_marker = self.find_nearby_marker(e.x - self.figure_x);
     if (e.guiEvent.LeftDClick()):
-      closest_marker = self.find_nearby_marker(e.x - self.figure_x);
       if (closest_marker is None):
         self.create_marker(e);
       else:
         self.edit_marker(closest_marker);
     else:
       self.select_graph(e);
+      self.selected_marker = closest_marker;
+
+  def onRelease(self, e):
+    self.selected_marker = None;
+
+  def onMouseMove(self, e):
+    if (self.selected_marker is not None):
+      t = self.x_to_time(e.x);
+      time_range = self.options["time_range"];
+      if (np.abs(self.selected_marker["time"] - t) > ((time_range[1] - time_range[0] ) / 50)):
+        self.move_marker(self.selected_marker, self.x_to_time(e.x));
+
+  def move_marker(self, marker, t):
+    marker["time"] = t;
+    e = wx.PyCommandEvent(self.EVTTYPE_UPDATE, wx.ID_ANY);
+    wx.PostEvent(self, e);
 
   def find_nearby_marker(self, x):
     start = self.options["time_range"][0];
@@ -80,16 +99,13 @@ class GraphWindow(matplotlib.backends.backend_wxagg.FigureCanvasWxAgg):
     for marker in self.markers:
       marker_x = np.round(float(marker["time"] - start) / (stop - start) * self.figure_width); # pixel X position of marker
       if (np.abs(marker_x - x) < closest_x):
-        closest_x = x;
+        closest_x = np.abs(marker_x - x);
         closest_marker = marker;
 
     return closest_marker;
 
   def create_marker(self, e):
-    pos = (e.x - self.figure_x) / self.figure_width;
-    start = self.options["time_range"][0];
-    stop = self.options["time_range"][1];
-    marker_time = (stop - start) * pos + start;
+    marker_time = self.x_to_time(e.x);
     dialog = CreateMarkerDialog(marker_time + self.options["timezone"] * 3600000, None, title="New Marker");
     if (dialog.ShowModal() == wx.ID_OK):
       marker = { };
@@ -113,6 +129,12 @@ class GraphWindow(matplotlib.backends.backend_wxagg.FigureCanvasWxAgg):
         self.draw_marker_line(subplot, marker);
       self.draw_marker_text(self.plots[-1], marker);
       self.draw();
+
+  def x_to_time(self, x):
+    pos = (x - self.figure_x) / self.figure_width;
+    start = self.options["time_range"][0];
+    stop = self.options["time_range"][1];
+    return (stop - start) * pos + start;
 
   def select_graph(self, e):
     ( max_x, max_y ) = self.GetSize();
