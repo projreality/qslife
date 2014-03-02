@@ -112,7 +112,7 @@ class GraphWindow(matplotlib.backends.backend_wxagg.FigureCanvasWxAgg):
 
   def create_marker(self, e):
     marker_time = self.x_to_time(e.x);
-    dialog = CreateMarkerDialog(marker_time + self.options["timezone"] * 3600000, None, title="New Marker");
+    dialog = CreateMarkerDialog(self, marker_time + self.options["timezone"] * 3600000, None, title="New Marker");
     if (dialog.ShowModal() == wx.ID_OK):
       marker = { };
       marker["time"] = int(dialog.time.GetValue()) - self.options["timezone"] * 3600000;
@@ -125,8 +125,10 @@ class GraphWindow(matplotlib.backends.backend_wxagg.FigureCanvasWxAgg):
       self.draw();
 
   def edit_marker(self, marker):
-    dialog = CreateMarkerDialog(marker["time"] + self.options["timezone"] * 3600000, None, title="Edit Marker", marker=marker);
+    self.selected_marker = marker;
+    dialog = CreateMarkerDialog(self, marker["time"] + self.options["timezone"] * 3600000, None, title="Edit Marker", marker=marker);
     if (dialog.ShowModal() == wx.ID_OK):
+      self.selected_marker = None;
       for l in self.marker_lines[marker["label"]]:
         l.remove();
         del l;
@@ -734,13 +736,15 @@ class GoToTimeDialog(wx.Dialog):
 ################################################################################
 class CreateMarkerDialog(wx.Dialog):
 
-  def __init__(self, marker_time, *args, **kwargs):
+  def __init__(self, parent, marker_time, *args, **kwargs):
     if (kwargs.has_key("marker")):
       marker = kwargs.pop("marker");
     else:
       marker = { "time": marker_time, "label": "", "color": "#FF0000" };
 
     super(CreateMarkerDialog, self).__init__(*args, **kwargs);
+
+    self.parent = parent;
 
     panel = wx.Panel(self);
     box = wx.StaticBox(panel, label="Marker");
@@ -772,6 +776,14 @@ class CreateMarkerDialog(wx.Dialog):
       self.EndModal(wx.ID_CANCEL);
       self.Close();
     elif ((key_code == wx.WXK_RETURN) or (key_code == wx.WXK_NUMPAD_ENTER)):
+      # Verify no repeated labels
+      label = self.label.GetValue();
+      for marker in self.parent.markers:
+        if ((marker["label"] == label) and (self.parent.selected_marker != marker)):
+          wx.MessageBox("Label %s already used!" % ( label ), "Error", wx.OK | wx.ICON_ERROR);
+          return;
+
+      # Parse time and verify it is valid
       try:
         marker_time = time.strptime(self.time.GetValue(), "%m/%d/%Y %H:%M:%S");
       except ValueError:
@@ -782,6 +794,10 @@ class CreateMarkerDialog(wx.Dialog):
             marker_time = time.strptime(self.time.GetValue(), "%m/%d/%Y");
           except:
             marker_time = None;
+
+      if (marker_time is None):
+        wx.MessageBox("Invalid time", "Error", wx.OK | wx.ICON_ERROR);
+        return;
 
       marker_time = calendar.timegm(marker_time) * 1000;
       if (marker_time is not None):
