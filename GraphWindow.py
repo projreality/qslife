@@ -36,6 +36,7 @@ class GraphWindow(matplotlib.backends.backend_wxagg.FigureCanvasWxAgg):
     self.options["current_file"] = None;
     self.graph_config = [ ]; # List of data to graph
     self.markers = [ ];
+    self.marker_lines = { };
     self.selected_marker = None;
     self.options["num_visible_graphs"] = 6;
     self.options["time_range"] = ( 0, 60000 ); # time range to display data
@@ -83,13 +84,21 @@ class GraphWindow(matplotlib.backends.backend_wxagg.FigureCanvasWxAgg):
     if (self.selected_marker is not None):
       t = self.x_to_time(e.x);
       time_range = self.options["time_range"];
-      if (np.abs(self.selected_marker["time"] - t) > ((time_range[1] - time_range[0] ) / 50)):
-        self.move_marker(self.selected_marker, self.x_to_time(e.x));
+      #if (np.abs(self.selected_marker["time"] - t) > ((time_range[1] - time_range[0] ) / 50)):
+      self.move_marker(self.selected_marker, self.x_to_time(e.x));
 
   def move_marker(self, marker, t):
+    for l in self.marker_lines[marker["label"]]:
+      l.remove();
+      del l;
+    self.marker_lines[marker["label"]] = [ ];
     marker["time"] = t;
-    e = wx.PyCommandEvent(self.EVTTYPE_UPDATE, wx.ID_ANY);
-    wx.PostEvent(self, e);
+    #e = wx.PyCommandEvent(self.EVTTYPE_UPDATE, wx.ID_ANY);
+    #wx.PostEvent(self, e);
+    for subplot in self.plots:
+      self.draw_marker_line(subplot, marker);
+    self.draw_marker_text(self.plots[-1], marker);
+    self.draw();
 
   def find_nearby_marker(self, x):
     start = self.options["time_range"][0];
@@ -121,6 +130,10 @@ class GraphWindow(matplotlib.backends.backend_wxagg.FigureCanvasWxAgg):
   def edit_marker(self, marker):
     dialog = CreateMarkerDialog(marker["time"] + self.options["timezone"] * 3600000, None, title="Edit Marker", marker=marker);
     if (dialog.ShowModal() == wx.ID_OK):
+      for l in self.marker_lines[marker["label"]]:
+        l.remove();
+        del l;
+      self.marker_lines[marker["label"]] = [ ];
       marker["time"] = int(dialog.time.GetValue()) - self.options["timezone"] * 3600000;
       marker["label"] = dialog.label.GetValue();
       marker["color"] = "#FF0000";
@@ -400,14 +413,19 @@ class GraphWindow(matplotlib.backends.backend_wxagg.FigureCanvasWxAgg):
     self.draw();
 
   def draw_marker_line(self, subplot, marker):
-    subplot.axvline(x=marker["time"], ymin=-1000000, ymax=1000000, c=marker["color"], zorder=0, clip_on=False);
+    l = subplot.axvline(x=marker["time"], ymin=-1000000, ymax=1000000, c=marker["color"], zorder=0, clip_on=False);
+    try:
+      self.marker_lines[marker["label"]].append(l);
+    except KeyError:
+      self.marker_lines[marker["label"]] = [ l ];
 
   def draw_marker_text(self, subplot, marker):
     xlim = subplot.get_axes().get_xlim();
     x = marker["time"] + (xlim[1] - xlim[0]) / 100;
     ylim = subplot.get_axes().get_ylim();
     y = ylim[0] - (ylim[1] - ylim[0])/1.2;
-    self.plots[-1].text(x, y, marker["label"], color=marker["color"], zorder=0, clip_on=False);
+    t = self.plots[-1].text(x, y, marker["label"], color=marker["color"], zorder=0, clip_on=False);
+    self.marker_lines[marker["label"]].append(t);
 
 ################################################################################
 #################################### KEY DOWN ##################################
