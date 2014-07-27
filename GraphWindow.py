@@ -32,7 +32,7 @@ class GraphWindow(matplotlib.backends.backend_wxagg.FigureCanvasWxAgg):
     self.Bind(wx.EVT_MOUSEWHEEL, self.onMouseWheel);
 
     self.options = { };
-    self.options["clip"] = 1000;
+    self.options["clip"] = 1000000000;
     self.options["current_file"] = None;
     self.graph_config = [ ]; # List of data to graph
     self.markers = [ ];
@@ -356,8 +356,8 @@ class GraphWindow(matplotlib.backends.backend_wxagg.FigureCanvasWxAgg):
 
     ( ticks, labels ) = self.create_time_labels();
 
-    start_date = time.strftime("%m/%d/%Y", time.gmtime(self.options["time_range"][0]/1000 + self.options["timezone"]*3600));
-    stop_date = time.strftime("%m/%d/%Y", time.gmtime(self.options["time_range"][1]/1000 + self.options["timezone"]*3600));
+    start_date = time.strftime("%m/%d/%Y", time.gmtime(self.options["time_range"][0]/1000000000 + self.options["timezone"]*3600));
+    stop_date = time.strftime("%m/%d/%Y", time.gmtime(self.options["time_range"][1]/1000000000 + self.options["timezone"]*3600));
     if (start_date == stop_date):
       date_label = "\n" + start_date;
     else:
@@ -499,7 +499,7 @@ class GraphWindow(matplotlib.backends.backend_wxagg.FigureCanvasWxAgg):
 	length = self.options["time_range"][1] - self.options["time_range"][0];
 
         t = int(dialog.text_field.GetValue());
-	center = (t - self.options["timezone"] * 3600) * 1000;
+	center = (t - self.options["timezone"] * 3600) * 1000000000;
 	self.options["time_range"] = ( center - length/2, center + length/2 );
 	self.update();
 	self.load_data();
@@ -526,6 +526,10 @@ class GraphWindow(matplotlib.backends.backend_wxagg.FigureCanvasWxAgg):
 	  y_max = ceil(y_max + y_range * 0.15);
 	  self.graph_config[self.options["selected_graph"]]["yscale"] = ( y_min, y_max );
 	  self.update();
+    # List markers
+    elif (key_code == 77):
+      dialog = MarkersDialog(self.markers, None);
+      dialog.ShowModal();
     else:
       e.Skip();
 
@@ -533,7 +537,7 @@ class GraphWindow(matplotlib.backends.backend_wxagg.FigureCanvasWxAgg):
 ############################## CALCULATE STEP SIZE  ############################
 ################################################################################
   def calculate_step_size(self):
-    gap = (self.options["time_range"][1] - self.options["time_range"][0]) / 1000;
+    gap = (self.options["time_range"][1] - self.options["time_range"][0]) / 1000000000;
 
     if (gap <= 5):
       step_size = 1;
@@ -562,7 +566,7 @@ class GraphWindow(matplotlib.backends.backend_wxagg.FigureCanvasWxAgg):
     else:
       step_size = 24*3600;
 
-    step_size = step_size * 1000;
+    step_size = step_size * 1000000000;
 
     return step_size;
 
@@ -579,7 +583,7 @@ class GraphWindow(matplotlib.backends.backend_wxagg.FigureCanvasWxAgg):
     labels = [ "" ] * len(ticks);
     i = 0;
     for tick in ticks:
-      labels[i] = time.strftime("%H:%M:%S", time.gmtime(tick/1000 + self.options["timezone"]*3600));
+      labels[i] = time.strftime("%H:%M:%S", time.gmtime(tick/1000000000 + self.options["timezone"]*3600));
       i = i + 1;
 
     return ( ticks, labels );
@@ -694,7 +698,7 @@ class GoToTimeDialog(wx.Dialog):
     box = wx.StaticBox(panel, label="Go to");
     sizer = wx.StaticBoxSizer(box, wx.HORIZONTAL);
     self.text_field = wx.TextCtrl(panel, size=( 190, -1 ));
-    center = ((self.parent.options["time_range"][0] + self.parent.options["time_range"][1]) / 2) / 1000 + self.parent.options["timezone"] * 3600;
+    center = ((self.parent.options["time_range"][0] + self.parent.options["time_range"][1]) / 2) / 1000000000 + self.parent.options["timezone"] * 3600;
     center_str = time.strftime("%m/%d/%Y %H:%M:%S", time.gmtime(center));
     self.text_field.SetValue(center_str);
     sizer.Add(self.text_field);
@@ -753,7 +757,7 @@ class CreateMarkerDialog(wx.Dialog):
 
     sizer.Add(wx.StaticText(panel, label="Time"), pos=( 0, 0 ), flag=wx.LEFT | wx.TOP, border=4);
     self.time = wx.TextCtrl(panel, size=( 150, -1 ));
-    self.time.SetValue(time.strftime("%m/%d/%Y %H:%M:%S", time.gmtime(np.floor(marker_time/1000))));
+    self.time.SetValue(time.strftime("%m/%d/%Y %H:%M:%S", time.gmtime(np.floor(marker_time/1000000000))));
     sizer.Add(self.time, pos=( 0, 1 ));
     sizer.Add(wx.StaticText(panel, label="Label"), pos=( 1, 0 ), border=4);
     self.label = wx.TextCtrl(panel, size=( 150, -1));
@@ -799,10 +803,48 @@ class CreateMarkerDialog(wx.Dialog):
         wx.MessageBox("Invalid time", "Error", wx.OK | wx.ICON_ERROR);
         return;
 
-      marker_time = calendar.timegm(marker_time) * 1000;
+      marker_time = calendar.timegm(marker_time) * 1000000000;
       if (marker_time is not None):
         self.time.SetValue(str(marker_time));
         self.EndModal(wx.ID_OK);
         self.Close();
     else:
       e.Skip();
+
+################################################################################
+################################ MARKERS DIALOG ################################
+################################################################################
+class MarkersDialog(wx.Dialog):
+
+  def __init__(self, markers, *args, **kwargs):
+    super(MarkersDialog, self).__init__(*args, **kwargs);
+
+    self.markers = markers;
+
+    self.create_gui();
+
+  def create_gui(self):
+    panel = wx.Panel(self);
+    box = wx.StaticBox(panel, label="Markers");
+    box_sizer = wx.StaticBoxSizer(box, wx.VERTICAL);
+
+    self.label = wx.TextCtrl(panel, size=( 150, -1 ));
+    box_sizer.Add(self.label);
+
+    labels = [ marker["label"] for marker in self.markers ];
+    labels.sort();
+    self.list = wx.ListBox(panel, choices=labels, size=( 150, 250 ));
+    box_sizer.Add(self.list);
+
+    self.label.SetFocus();
+    panel.SetSizer(box_sizer);
+    self.SetSize(( 161, 300 ));
+
+    self.Bind(wx.EVT_KEY_DOWN, self.on_key_down);
+
+  def on_key_down(self, e):
+    key_code = e.GetKeyCode();
+
+    if (key_code == wx.WXK_ESCAPE):
+      self.EndModal(wx.ID_CANCEL);
+      self.Close();
