@@ -12,6 +12,8 @@ import wx;
 
 from matplotlib.pyplot import *;
 
+from GraphOptionsDialog import *;
+
 class GraphWindow(matplotlib.backends.backend_wxagg.FigureCanvasWxAgg):
 
 ################################################################################
@@ -461,27 +463,7 @@ class GraphWindow(matplotlib.backends.backend_wxagg.FigureCanvasWxAgg):
 	self.options["top_graph"] = self.options["top_graph"] + 1;
 	self.update();
     elif (key_code == wx.WXK_NUMPAD_ENTER):
-      dialog = GraphOptionsDialog(self, None, title="Graph Options - " + self.graph_config[self.options["selected_graph"]]["node"]);
-      if (dialog.ShowModal() == wx.ID_OK):
-	mask_expr = dialog.masking.GetValue();
-	if (self.graph_config[self.options["selected_graph"]]["valid"] != mask_expr):
-	  self.graph_config[self.options["selected_graph"]]["valid"] = mask_expr;
-	  x = self.data[self.options["selected_graph"]];
-	  x.mask = False;
-	  if (mask_expr != ""):
-	    t = x[:,0];
-	    x = x[:,1];
-	    x = ma.masked_where(~eval(mask_expr), x);
-	    self.data[self.options["selected_graph"]] = ma.concatenate(( t[:,newaxis], x[:,newaxis] ), axis=1);
-	ymin = float(dialog.ymin.GetValue());
-	ymax = float(dialog.ymax.GetValue());
-        new_value = dialog.value_field.GetStringSelection();
-        if (self.graph_config[self.options["selected_graph"]]["value"] != new_value):
-          self.graph_config[self.options["selected_graph"]]["value"] = new_value;
-          self.load_data(True);
-	self.graph_config[self.options["selected_graph"]]["yscale"] = ( ymin, ymax );
-	self.update();
-      dialog.Destroy();
+      self.show_graph_options(self.graph_config[self.options["selected_graph"]]);
     elif (key_code == wx.WXK_DELETE):
       if (self.options["selected_graph"] != None):
 	dialog = wx.MessageDialog(None, "Are you sure you want to remove the graph?", "Confirm delete graph", wx.YES_NO | wx.NO_DEFAULT | wx.ICON_EXCLAMATION);
@@ -532,6 +514,39 @@ class GraphWindow(matplotlib.backends.backend_wxagg.FigureCanvasWxAgg):
       dialog.ShowModal();
     else:
       e.Skip();
+
+  def show_graph_options(self, config):
+    dialog = GraphOptionsDialog(self, config, None, title="Graph Options - %s" % ( config["node"] ));
+    if (dialog.ShowModal() == wx.ID_OK):
+      mask_expr = dialog.masking.GetValue();
+      ymin = float(dialog.ymin.GetValue());
+      ymax = float(dialog.ymax.GetValue());
+      new_value = dialog.value_field.GetStringSelection();
+      if ("new" not in config):
+        if (self.graph_config[self.options["selected_graph"]]["valid"] != mask_expr):
+          self.graph_config[self.options["selected_graph"]]["valid"] = mask_expr;
+	  x = self.data[self.options["selected_graph"]];
+	  x.mask = False;
+	  if (mask_expr != ""):
+	    t = x[:,0];
+	    x = x[:,1];
+	    x = ma.masked_where(~eval(mask_expr), x);
+	    self.data[self.options["selected_graph"]] = ma.concatenate(( t[:,newaxis], x[:,newaxis] ), axis=1);
+        if (self.graph_config[self.options["selected_graph"]]["value"] != new_value):
+          self.graph_config[self.options["selected_graph"]]["value"] = new_value;
+          self.load_data(True);
+        self.graph_config[self.options["selected_graph"]]["yscale"] = ( ymin, ymax );
+        self.update();
+      else:
+        del config["new"];
+        config["time"] = "time";
+        config["value"] = new_value;
+        config["valid"] = mask_expr;
+        config["yscale"] = ( ymin, ymax );
+        self.graph_config.append(config);
+        self.load_data(True);
+        self.update();
+    dialog.Destroy();
 
 ################################################################################
 ############################## CALCULATE STEP SIZE  ############################
@@ -587,103 +602,6 @@ class GraphWindow(matplotlib.backends.backend_wxagg.FigureCanvasWxAgg):
       i = i + 1;
 
     return ( ticks, labels );
-
-################################################################################
-############################### GRAPH DROP TARGET ##############################
-################################################################################
-class GraphDropTarget(wx.TextDropTarget):
-
-  def __init__(self, object):
-    super(GraphDropTarget, self).__init__();
-    self.object = object;
-
-  def OnDropText(self, x, y, data):
-    config = { "node":data, "time":"time", "value":"value", "yscale":( 50, 150 ), "valid":"" };
-    self.object.add_graph(-1, config);
-
-################################################################################
-################################## GRAPH DIALOG ################################
-################################################################################
-class GraphOptionsDialog(wx.Dialog):
-
-  def __init__(self, parent, *args, **kwargs):
-    super(GraphOptionsDialog, self).__init__(*args, **kwargs);
-
-    self._parent = parent;
-
-    self.create_gui();
-
-    self.SetSize(( 390, 185 ));
-
-  def create_gui(self):
-    panel = wx.Panel(self);
-    box = wx.StaticBox(panel, label="Graph Options");
-    box_sizer = wx.StaticBoxSizer(box, wx.VERTICAL);
-    sizer = wx.GridBagSizer(5, 5);
-
-    sizer.Add(wx.StaticText(panel, label="Value field"), pos=( 0, 0 ), flag=wx.LEFT | wx.TOP, border=4);
-    fields = self._parent.hdfqs.get_fields(self._parent.graph_config[self._parent.options["selected_graph"]]["node"]);
-    fields.remove("time");
-    fields.sort();
-    self.value_field = wx.Choice(panel);
-    self.value_field.SetItems(fields);
-    self.value_field.SetStringSelection(self._parent.graph_config[self._parent.options["selected_graph"]]["value"]);
-    sizer.Add(self.value_field, pos=( 0, 1 ), border=4);
-
-    sizer.Add(wx.StaticText(panel, label="Valid condition"), pos=( 1, 0 ), border=4)
-
-    self.masking = wx.TextCtrl(panel, size=( 250, -1 ));
-    self.masking.SetValue(self._parent.graph_config[self._parent.options["selected_graph"]]["valid"]);
-    self.masking.Bind(wx.EVT_KEY_DOWN, self.onKeyDown);
-    sizer.Add(self.masking, pos=( 1, 1 ), span=( 1, 3) );
-
-    sizer.Add(wx.StaticText(panel, label="Y min"), pos=( 2, 0 ), border=4);
-
-    self.ymin = wx.TextCtrl(panel, size=( 75, -1 ));
-    self.ymin.SetValue(str(self._parent.graph_config[self._parent.options["selected_graph"]]["yscale"][0]));
-    self.ymin.Bind(wx.EVT_KEY_DOWN, self.onKeyDown);
-    sizer.Add(self.ymin, pos=( 2, 1 ), span=( 1, 1 ));
-
-    sizer.Add(wx.StaticText(panel, label="Y max"), pos=( 3, 0 ), flag=wx.LEFT | wx.TOP, border=4);
-
-    self.ymax = wx.TextCtrl(panel, size=( 75, -1 ));
-    self.ymax.SetValue(str(self._parent.graph_config[self._parent.options["selected_graph"]]["yscale"][1]));
-    self.ymax.Bind(wx.EVT_KEY_DOWN, self.onKeyDown);
-    sizer.Add(self.ymax, pos=( 3, 1 ), span=( 1, 1 ));
-
-    ok_button = wx.Button(panel, label="OK");
-    ok_button.Bind(wx.EVT_BUTTON, self.onOk);
-    sizer.Add(ok_button, pos=( 4, 2 ), span=( 1, 1 ));
-
-    cancel_button = wx.Button(panel, label="Cancel");
-    cancel_button.Bind(wx.EVT_BUTTON, self.onCancel);
-    sizer.Add(cancel_button, pos=( 4, 3 ), span=( 1, 1 ));
-
-    box_sizer.Add(sizer);
-
-    panel.SetSizer(box_sizer);
-
-    self.masking.SetFocus();
-
-  def onKeyDown(self, e):
-    key_code = e.GetKeyCode();
-
-    if (key_code == wx.WXK_ESCAPE):
-      self.EndModal(wx.ID_CANCEL);
-      self.Close();
-    elif ((key_code == wx.WXK_RETURN) or (key_code == wx.WXK_NUMPAD_ENTER)):
-      self.EndModal(wx.ID_OK);
-      self.Close();
-    else:
-      e.Skip();
-
-  def onOk(self, e):
-    self.EndModal(wx.ID_OK);
-    self.Close();
-
-  def onCancel(self, e):
-    self.EndModal(wx.ID_CANCEL);
-    self.Close();
 
 ################################################################################
 ############################## GO TO TIME DIALOG ###############################

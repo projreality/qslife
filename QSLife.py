@@ -20,7 +20,6 @@ from matplotlib.backends.backend_wxagg import FigureCanvasWxAgg;
 from matplotlib.figure import Figure;
 
 from GraphWindow import GraphWindow;
-from GraphWindow import GraphDropTarget;
 from HDFQS import *;
 
 class QSLife(wx.Frame):
@@ -83,10 +82,7 @@ class QSLife(wx.Frame):
     # GraphWindow
     self.graphs = GraphWindow(panel, wx.ID_ANY);
 
-    # Drag-and-drop
-    dt = GraphDropTarget(self.graphs);
-    self.graphs.SetDropTarget(dt);
-    self.Bind(wx.EVT_TREE_BEGIN_DRAG, self.onDragInit, id=self.tree.GetId());
+    self.Bind(wx.EVT_TREE_ITEM_RIGHT_CLICK, self.onTreeItemRightClick, id=self.tree.GetId());
 
 ################################################################################
 ############################ GUI MISCELLANEOUS SETUP ###########################
@@ -246,19 +242,28 @@ class QSLife(wx.Frame):
 	i.import_data(path);
 	self.load_file(self.current_file);
 
-################################### DRAG INIT ##################################
-  def onDragInit(self, e):
+############################# TREE ITEM RIGHT CLICK ############################
+  def onTreeItemRightClick(self, e):
     root = self.tree.GetRootItem();
     item = e.GetItem();
-    parent = self.tree.GetItemParent(item);
-    if ((item == root) or (parent == root)):
+    if (item == root):
       return;
-    source = "/" + self.tree.GetItemText(self.tree.GetItemParent(parent)) + "/" + self.tree.GetItemText(parent) + "/" + self.tree.GetItemText(item);
-    tdo = wx.TextDataObject(source);
-    tds = wx.DropSource(self.tree);
-    tds.SetData(tdo);
-    tds.DoDragDrop(True);
+    category = self.tree.GetItemParent(item);
+    if (category == root):
+      return;
+    location = self.tree.GetItemParent(category);
+    if (location == root):
+      return;
+    self.selected_source = "/" + self.tree.GetItemText(location) + "/" + self.tree.GetItemText(category) + "/" + self.tree.GetItemText(item);
 
+    menu = wx.Menu();
+    menu_create_graph = menu.AppendItem(wx.MenuItem(menu, wx.ID_ANY, "Create new graph"));
+    self.Bind(wx.EVT_MENU, self.onCreateGraph, menu_create_graph);
+    self.PopupMenu(menu);
+
+  def onCreateGraph(self, e):
+    config = dict(node=self.selected_source, new=True);
+    self.graphs.show_graph_options(config);
 
 if (__name__ == "__main__"):
   app = wx.App();
