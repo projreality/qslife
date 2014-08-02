@@ -463,27 +463,7 @@ class GraphWindow(matplotlib.backends.backend_wxagg.FigureCanvasWxAgg):
 	self.options["top_graph"] = self.options["top_graph"] + 1;
 	self.update();
     elif (key_code == wx.WXK_NUMPAD_ENTER):
-      dialog = GraphOptionsDialog(self, self.graph_config[self.options["selected_graph"]], None, title="Graph Options - " + self.graph_config[self.options["selected_graph"]]["node"]);
-      if (dialog.ShowModal() == wx.ID_OK):
-	mask_expr = dialog.masking.GetValue();
-	if (self.graph_config[self.options["selected_graph"]]["valid"] != mask_expr):
-	  self.graph_config[self.options["selected_graph"]]["valid"] = mask_expr;
-	  x = self.data[self.options["selected_graph"]];
-	  x.mask = False;
-	  if (mask_expr != ""):
-	    t = x[:,0];
-	    x = x[:,1];
-	    x = ma.masked_where(~eval(mask_expr), x);
-	    self.data[self.options["selected_graph"]] = ma.concatenate(( t[:,newaxis], x[:,newaxis] ), axis=1);
-	ymin = float(dialog.ymin.GetValue());
-	ymax = float(dialog.ymax.GetValue());
-        new_value = dialog.value_field.GetStringSelection();
-        if (self.graph_config[self.options["selected_graph"]]["value"] != new_value):
-          self.graph_config[self.options["selected_graph"]]["value"] = new_value;
-          self.load_data(True);
-	self.graph_config[self.options["selected_graph"]]["yscale"] = ( ymin, ymax );
-	self.update();
-      dialog.Destroy();
+      self.show_graph_options(self.graph_config[self.options["selected_graph"]]);
     elif (key_code == wx.WXK_DELETE):
       if (self.options["selected_graph"] != None):
 	dialog = wx.MessageDialog(None, "Are you sure you want to remove the graph?", "Confirm delete graph", wx.YES_NO | wx.NO_DEFAULT | wx.ICON_EXCLAMATION);
@@ -534,6 +514,29 @@ class GraphWindow(matplotlib.backends.backend_wxagg.FigureCanvasWxAgg):
       dialog.ShowModal();
     else:
       e.Skip();
+
+  def show_graph_options(self, config):
+    dialog = GraphOptionsDialog(self, config, None, title="Graph Options - %s" % ( config["node"] ));
+    if (dialog.ShowModal() == wx.ID_OK):
+      mask_expr = dialog.masking.GetValue();
+      if (self.graph_config[self.options["selected_graph"]]["valid"] != mask_expr):
+        self.graph_config[self.options["selected_graph"]]["valid"] = mask_expr;
+	x = self.data[self.options["selected_graph"]];
+	x.mask = False;
+	if (mask_expr != ""):
+	  t = x[:,0];
+	  x = x[:,1];
+	  x = ma.masked_where(~eval(mask_expr), x);
+	  self.data[self.options["selected_graph"]] = ma.concatenate(( t[:,newaxis], x[:,newaxis] ), axis=1);
+      ymin = float(dialog.ymin.GetValue());
+      ymax = float(dialog.ymax.GetValue());
+      new_value = dialog.value_field.GetStringSelection();
+      if (self.graph_config[self.options["selected_graph"]]["value"] != new_value):
+        self.graph_config[self.options["selected_graph"]]["value"] = new_value;
+        self.load_data(True);
+      self.graph_config[self.options["selected_graph"]]["yscale"] = ( ymin, ymax );
+      self.update();
+    dialog.Destroy();
 
 ################################################################################
 ############################## CALCULATE STEP SIZE  ############################
