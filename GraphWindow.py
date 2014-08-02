@@ -519,23 +519,33 @@ class GraphWindow(matplotlib.backends.backend_wxagg.FigureCanvasWxAgg):
     dialog = GraphOptionsDialog(self, config, None, title="Graph Options - %s" % ( config["node"] ));
     if (dialog.ShowModal() == wx.ID_OK):
       mask_expr = dialog.masking.GetValue();
-      if (self.graph_config[self.options["selected_graph"]]["valid"] != mask_expr):
-        self.graph_config[self.options["selected_graph"]]["valid"] = mask_expr;
-	x = self.data[self.options["selected_graph"]];
-	x.mask = False;
-	if (mask_expr != ""):
-	  t = x[:,0];
-	  x = x[:,1];
-	  x = ma.masked_where(~eval(mask_expr), x);
-	  self.data[self.options["selected_graph"]] = ma.concatenate(( t[:,newaxis], x[:,newaxis] ), axis=1);
       ymin = float(dialog.ymin.GetValue());
       ymax = float(dialog.ymax.GetValue());
       new_value = dialog.value_field.GetStringSelection();
-      if (self.graph_config[self.options["selected_graph"]]["value"] != new_value):
-        self.graph_config[self.options["selected_graph"]]["value"] = new_value;
+      if ("new" not in config):
+        if (self.graph_config[self.options["selected_graph"]]["valid"] != mask_expr):
+          self.graph_config[self.options["selected_graph"]]["valid"] = mask_expr;
+	  x = self.data[self.options["selected_graph"]];
+	  x.mask = False;
+	  if (mask_expr != ""):
+	    t = x[:,0];
+	    x = x[:,1];
+	    x = ma.masked_where(~eval(mask_expr), x);
+	    self.data[self.options["selected_graph"]] = ma.concatenate(( t[:,newaxis], x[:,newaxis] ), axis=1);
+        if (self.graph_config[self.options["selected_graph"]]["value"] != new_value):
+          self.graph_config[self.options["selected_graph"]]["value"] = new_value;
+          self.load_data(True);
+        self.graph_config[self.options["selected_graph"]]["yscale"] = ( ymin, ymax );
+        self.update();
+      else:
+        del config["new"];
+        config["time"] = "time";
+        config["value"] = new_value;
+        config["valid"] = mask_expr;
+        config["yscale"] = ( ymin, ymax );
+        self.graph_config.append(config);
         self.load_data(True);
-      self.graph_config[self.options["selected_graph"]]["yscale"] = ( ymin, ymax );
-      self.update();
+        self.update();
     dialog.Destroy();
 
 ################################################################################
@@ -592,19 +602,6 @@ class GraphWindow(matplotlib.backends.backend_wxagg.FigureCanvasWxAgg):
       i = i + 1;
 
     return ( ticks, labels );
-
-################################################################################
-############################### GRAPH DROP TARGET ##############################
-################################################################################
-class GraphDropTarget(wx.TextDropTarget):
-
-  def __init__(self, object):
-    super(GraphDropTarget, self).__init__();
-    self.object = object;
-
-  def OnDropText(self, x, y, data):
-    config = { "node":data, "time":"time", "value":"value", "yscale":( 50, 150 ), "valid":"" };
-    self.object.add_graph(-1, config);
 
 ################################################################################
 ############################## GO TO TIME DIALOG ###############################

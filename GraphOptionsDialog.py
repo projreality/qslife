@@ -32,7 +32,7 @@ class GraphOptionsDialog(wx.Dialog):
       else:
         self.config["value"] = fields[0];
       self.config["valid"] = "";
-      self.config["yscale"] = [ 0, 1 ];
+      self.config["yscale"] = ( 0, 1 );
 
     sizer.Add(wx.StaticText(panel, label="Value field"), pos=( 0, 0 ), flag=wx.LEFT | wx.TOP, border=4);
     self.value_field = wx.Choice(panel);

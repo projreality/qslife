@@ -20,7 +20,6 @@ from matplotlib.backends.backend_wxagg import FigureCanvasWxAgg;
 from matplotlib.figure import Figure;
 
 from GraphWindow import GraphWindow;
-from GraphWindow import GraphDropTarget;
 from HDFQS import *;
 
 class QSLife(wx.Frame):
@@ -83,10 +82,6 @@ class QSLife(wx.Frame):
     # GraphWindow
     self.graphs = GraphWindow(panel, wx.ID_ANY);
 
-    # Drag-and-drop
-    dt = GraphDropTarget(self.graphs);
-    self.graphs.SetDropTarget(dt);
-    self.Bind(wx.EVT_TREE_BEGIN_DRAG, self.onDragInit, id=self.tree.GetId());
     self.Bind(wx.EVT_TREE_ITEM_RIGHT_CLICK, self.onTreeItemRightClick, id=self.tree.GetId());
 
 ################################################################################
@@ -247,19 +242,6 @@ class QSLife(wx.Frame):
 	i.import_data(path);
 	self.load_file(self.current_file);
 
-################################### DRAG INIT ##################################
-  def onDragInit(self, e):
-    root = self.tree.GetRootItem();
-    item = e.GetItem();
-    parent = self.tree.GetItemParent(item);
-    if ((item == root) or (parent == root)):
-      return;
-    source = "/" + self.tree.GetItemText(self.tree.GetItemParent(parent)) + "/" + self.tree.GetItemText(parent) + "/" + self.tree.GetItemText(item);
-    tdo = wx.TextDataObject(source);
-    tds = wx.DropSource(self.tree);
-    tds.SetData(tdo);
-    tds.DoDragDrop(True);
-
 ############################# TREE ITEM RIGHT CLICK ############################
   def onTreeItemRightClick(self, e):
     root = self.tree.GetRootItem();
@@ -280,7 +262,6 @@ class QSLife(wx.Frame):
     self.PopupMenu(menu);
 
   def onCreateGraph(self, e):
-    print self.selected_source;
     config = dict(node=self.selected_source, new=True);
     self.graphs.show_graph_options(config);
 
