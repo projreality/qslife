@@ -26,14 +26,18 @@ class GraphWindow(matplotlib.backends.backend_wxagg.FigureCanvasWxAgg):
     subplot = self.figure.add_subplot(1, 1, 1, visible=False);
     bb = subplot.get_window_extent().transformed(self.figure.dpi_scale_trans.inverted());
     self.figure_width = int(bb.width * self.figure.dpi);
+    self.figure_x = bb.xmin * self.figure.dpi;
 
     self.Bind(wx.EVT_KEY_DOWN, self.onKeyDown);
     self.Bind(wx.EVT_MOUSEWHEEL, self.onMouseWheel);
 
     self.options = { };
-    self.options["clip"] = 1000;
+    self.options["clip"] = 1000000000;
     self.options["current_file"] = None;
     self.graph_config = [ ]; # List of data to graph
+    self.markers = [ ];
+    self.marker_lines = { };
+    self.selected_marker = None;
     self.options["num_visible_graphs"] = 6;
     self.options["time_range"] = ( 0, 60000 ); # time range to display data
     self.options["timezone"] = 0;
@@ -44,6 +48,8 @@ class GraphWindow(matplotlib.backends.backend_wxagg.FigureCanvasWxAgg):
     self.data_range = None;
 
     self.mpl_connect("button_press_event", self.onClick);
+    self.mpl_connect("button_release_event", self.onRelease);
+    self.mpl_connect("motion_notify_event", self.onMouseMove);
 
     self.lock_data = threading.Lock();
 
@@ -61,6 +67,88 @@ class GraphWindow(matplotlib.backends.backend_wxagg.FigureCanvasWxAgg):
 ################################### ON CLICK ###################################
 ################################################################################
   def onClick(self, e):
+    closest_marker = self.find_nearby_marker(e.x - self.figure_x);
+    if (e.guiEvent.LeftDClick()):
+      if (closest_marker is None):
+        self.create_marker(e);
+      else:
+        self.edit_marker(closest_marker);
+    else:
+      self.select_graph(e);
+      self.selected_marker = closest_marker;
+
+  def onRelease(self, e):
+    self.selected_marker = None;
+
+  def onMouseMove(self, e):
+    if (self.selected_marker is not None):
+      t = self.x_to_time(e.x);
+      time_range = self.options["time_range"];
+      self.move_marker(self.selected_marker, self.x_to_time(e.x));
+
+  def move_marker(self, marker, t):
+    for l in self.marker_lines[marker["label"]]:
+      l.remove();
+      del l;
+    self.marker_lines[marker["label"]] = [ ];
+    marker["time"] = t;
+    for subplot in self.plots:
+      self.draw_marker_line(subplot, marker);
+    self.draw_marker_text(self.plots[-1], marker);
+    self.draw();
+
+  def find_nearby_marker(self, x):
+    start = self.options["time_range"][0];
+    stop = self.options["time_range"][1];
+    closest_marker = None;
+    closest_x = 5;
+    for marker in self.markers:
+      marker_x = np.round(float(marker["time"] - start) / (stop - start) * self.figure_width); # pixel X position of marker
+      if (np.abs(marker_x - x) < closest_x):
+        closest_x = np.abs(marker_x - x);
+        closest_marker = marker;
+
+    return closest_marker;
+
+  def create_marker(self, e):
+    marker_time = self.x_to_time(e.x);
+    dialog = CreateMarkerDialog(self, marker_time + self.options["timezone"] * 3600000, None, title="New Marker");
+    if (dialog.ShowModal() == wx.ID_OK):
+      marker = { };
+      marker["time"] = int(dialog.time.GetValue()) - self.options["timezone"] * 3600000;
+      marker["label"] = dialog.label.GetValue();
+      marker["color"] = "#FF0000";
+      self.markers.append(marker);
+      for subplot in self.plots:
+        self.draw_marker_line(subplot, marker);
+      self.draw_marker_text(self.plots[-1], marker);
+      self.draw();
+
+  def edit_marker(self, marker):
+    self.selected_marker = marker;
+    dialog = CreateMarkerDialog(self, marker["time"] + self.options["timezone"] * 3600000, None, title="Edit Marker", marker=marker);
+    if (dialog.ShowModal() == wx.ID_OK):
+      self.selected_marker = None;
+      for l in self.marker_lines[marker["label"]]:
+        l.remove();
+        del l;
+      self.marker_lines[marker["label"]] = [ ];
+      marker["time"] = int(dialog.time.GetValue()) - self.options["timezone"] * 3600000;
+      marker["label"] = dialog.label.GetValue();
+      marker["color"] = "#FF0000";
+      self.markers.append(marker);
+      for subplot in self.plots:
+        self.draw_marker_line(subplot, marker);
+      self.draw_marker_text(self.plots[-1], marker);
+      self.draw();
+
+  def x_to_time(self, x):
+    pos = (x - self.figure_x) / self.figure_width;
+    start = self.options["time_range"][0];
+    stop = self.options["time_range"][1];
+    return (stop - start) * pos + start;
+
+  def select_graph(self, e):
     ( max_x, max_y ) = self.GetSize();
     x = e.x;
     y = max_y - e.y;
@@ -127,6 +215,15 @@ class GraphWindow(matplotlib.backends.backend_wxagg.FigureCanvasWxAgg):
       for i in range(len(self.graph_config)):
 	self.data.append(transpose(array([ [ ], [ ] ])));
     return self;
+
+################################################################################
+############################ GET/SET GRAPH MARKERS #############################
+################################################################################
+  def get_graph_markers(self):
+    return self.markers;
+
+  def set_graph_markers(self, markers):
+    self.markers = markers;
 
 ################################################################################
 ################################## SET HDFQS ###################################
@@ -259,8 +356,8 @@ class GraphWindow(matplotlib.backends.backend_wxagg.FigureCanvasWxAgg):
 
     ( ticks, labels ) = self.create_time_labels();
 
-    start_date = time.strftime("%m/%d/%Y", time.gmtime(self.options["time_range"][0]/1000 + self.options["timezone"]*3600));
-    stop_date = time.strftime("%m/%d/%Y", time.gmtime(self.options["time_range"][1]/1000 + self.options["timezone"]*3600));
+    start_date = time.strftime("%m/%d/%Y", time.gmtime(self.options["time_range"][0]/1000000000 + self.options["timezone"]*3600));
+    stop_date = time.strftime("%m/%d/%Y", time.gmtime(self.options["time_range"][1]/1000000000 + self.options["timezone"]*3600));
     if (start_date == stop_date):
       date_label = "\n" + start_date;
     else:
@@ -269,6 +366,7 @@ class GraphWindow(matplotlib.backends.backend_wxagg.FigureCanvasWxAgg):
     num = len(self.graph_config);
     with self.lock_data:
       data = list(self.data);
+    self.plots = [ ];
     for i in arange(self.options["top_graph"], num):
       if ((i - self.options["top_graph"]) >= self.options["num_visible_graphs"]):
         break;
@@ -300,11 +398,33 @@ class GraphWindow(matplotlib.backends.backend_wxagg.FigureCanvasWxAgg):
       ax.set_xticklabels(labels);
       ax.set_ylim(entry["yscale"]);
 
+      for marker in self.markers:
+        self.draw_marker_line(subplot, marker);
+
+      self.plots.append(subplot);
+
+    for marker in self.markers:
+      self.draw_marker_text(subplot, marker);
     try:
       subplot.set_xlabel(date_label);
     except UnboundLocalError:
       pass;
     self.draw();
+
+  def draw_marker_line(self, subplot, marker):
+    l = subplot.axvline(x=marker["time"], ymin=-1000000, ymax=1000000, c=marker["color"], zorder=0, clip_on=False);
+    try:
+      self.marker_lines[marker["label"]].append(l);
+    except KeyError:
+      self.marker_lines[marker["label"]] = [ l ];
+
+  def draw_marker_text(self, subplot, marker):
+    xlim = subplot.get_axes().get_xlim();
+    x = marker["time"] + (xlim[1] - xlim[0]) / 100;
+    ylim = subplot.get_axes().get_ylim();
+    y = ylim[0] - (ylim[1] - ylim[0])/1.2;
+    t = self.plots[-1].text(x, y, marker["label"], color=marker["color"], zorder=0, clip_on=False);
+    self.marker_lines[marker["label"]].append(t);
 
 ################################################################################
 #################################### KEY DOWN ##################################
@@ -377,22 +497,12 @@ class GraphWindow(matplotlib.backends.backend_wxagg.FigureCanvasWxAgg):
 
       if (result == wx.ID_OK):
 	length = self.options["time_range"][1] - self.options["time_range"][0];
-        try:
-	  center_tuple = time.strptime(dialog.text_field.GetValue(), "%m/%d/%Y %H:%M:%S");
-        except ValueError:
-          try:
-	    center_tuple = time.strptime(dialog.text_field.GetValue(), "%m/%d/%Y %H:%M");
-          except ValueError:
-            try:
-	      center_tuple = time.strptime(dialog.text_field.GetValue(), "%m/%d/%Y");
-            except ValueError:
-              center_tuple = None;
 
-        if (center_tuple is not None):
-	  center = (calendar.timegm(center_tuple) - self.options["timezone"] * 3600) * 1000;
-	  self.options["time_range"] = ( center - length/2, center + length/2 );
-	  self.update();
-	  self.load_data();
+        t = int(dialog.text_field.GetValue());
+	center = (t - self.options["timezone"] * 3600) * 1000000000;
+	self.options["time_range"] = ( center - length/2, center + length/2 );
+	self.update();
+	self.load_data();
 
       dialog.Destroy();
     # Autoscale Y
@@ -416,6 +526,10 @@ class GraphWindow(matplotlib.backends.backend_wxagg.FigureCanvasWxAgg):
 	  y_max = ceil(y_max + y_range * 0.15);
 	  self.graph_config[self.options["selected_graph"]]["yscale"] = ( y_min, y_max );
 	  self.update();
+    # List markers
+    elif (key_code == 77):
+      dialog = MarkersDialog(self.markers, None);
+      dialog.ShowModal();
     else:
       e.Skip();
 
@@ -423,7 +537,7 @@ class GraphWindow(matplotlib.backends.backend_wxagg.FigureCanvasWxAgg):
 ############################## CALCULATE STEP SIZE  ############################
 ################################################################################
   def calculate_step_size(self):
-    gap = (self.options["time_range"][1] - self.options["time_range"][0]) / 1000;
+    gap = (self.options["time_range"][1] - self.options["time_range"][0]) / 1000000000;
 
     if (gap <= 5):
       step_size = 1;
@@ -452,7 +566,7 @@ class GraphWindow(matplotlib.backends.backend_wxagg.FigureCanvasWxAgg):
     else:
       step_size = 24*3600;
 
-    step_size = step_size * 1000;
+    step_size = step_size * 1000000000;
 
     return step_size;
 
@@ -469,7 +583,7 @@ class GraphWindow(matplotlib.backends.backend_wxagg.FigureCanvasWxAgg):
     labels = [ "" ] * len(ticks);
     i = 0;
     for tick in ticks:
-      labels[i] = time.strftime("%H:%M:%S", time.gmtime(tick/1000 + self.options["timezone"]*3600));
+      labels[i] = time.strftime("%H:%M:%S", time.gmtime(tick/1000000000 + self.options["timezone"]*3600));
       i = i + 1;
 
     return ( ticks, labels );
@@ -557,7 +671,7 @@ class GraphOptionsDialog(wx.Dialog):
     if (key_code == wx.WXK_ESCAPE):
       self.EndModal(wx.ID_CANCEL);
       self.Close();
-    elif (key_code == wx.WXK_NUMPAD_ENTER):
+    elif ((key_code == wx.WXK_RETURN) or (key_code == wx.WXK_NUMPAD_ENTER)):
       self.EndModal(wx.ID_OK);
       self.Close();
     else:
@@ -584,7 +698,7 @@ class GoToTimeDialog(wx.Dialog):
     box = wx.StaticBox(panel, label="Go to");
     sizer = wx.StaticBoxSizer(box, wx.HORIZONTAL);
     self.text_field = wx.TextCtrl(panel, size=( 190, -1 ));
-    center = ((self.parent.options["time_range"][0] + self.parent.options["time_range"][1]) / 2) / 1000 + self.parent.options["timezone"] * 3600;
+    center = ((self.parent.options["time_range"][0] + self.parent.options["time_range"][1]) / 2) / 1000000000 + self.parent.options["timezone"] * 3600;
     center_str = time.strftime("%m/%d/%Y %H:%M:%S", time.gmtime(center));
     self.text_field.SetValue(center_str);
     sizer.Add(self.text_field);
@@ -601,7 +715,136 @@ class GoToTimeDialog(wx.Dialog):
       self.EndModal(wx.ID_CANCEL);
       self.Close();
     elif ((key_code == wx.WXK_RETURN) or (key_code == wx.WXK_NUMPAD_ENTER)):
-      self.EndModal(wx.ID_OK);
-      self.Close();
+      try:
+        center_tuple = time.strptime(self.text_field.GetValue(), "%m/%d/%Y %H:%M:%S");
+      except ValueError:
+        try:
+          center_tuple = time.strptime(self.text_field.GetValue(), "%m/%d/%Y %H:%M");
+        except ValueError:
+          try:
+	    center_tuple = time.strptime(self.text_field.GetValue(), "%m/%d/%Y");
+          except ValueError:
+            center_tuple = None;
+
+      if (center_tuple is None):
+        wx.MessageBox("Invalid time", "Error", wx.OK | wx.ICON_ERROR);
+      else:
+        self.text_field.SetValue(str(calendar.timegm(center_tuple)));
+        self.EndModal(wx.ID_OK);
+        self.Close();
     else:
       e.Skip();
+
+################################################################################
+############################# CREATE MARKER DIALOG #############################
+################################################################################
+class CreateMarkerDialog(wx.Dialog):
+
+  def __init__(self, parent, marker_time, *args, **kwargs):
+    if (kwargs.has_key("marker")):
+      marker = kwargs.pop("marker");
+    else:
+      marker = { "time": marker_time, "label": "", "color": "#FF0000" };
+
+    super(CreateMarkerDialog, self).__init__(*args, **kwargs);
+
+    self.parent = parent;
+
+    panel = wx.Panel(self);
+    box = wx.StaticBox(panel, label="Marker");
+    box_sizer = wx.StaticBoxSizer(box, wx.VERTICAL);
+    sizer = wx.GridBagSizer(2, 2);
+
+    sizer.Add(wx.StaticText(panel, label="Time"), pos=( 0, 0 ), flag=wx.LEFT | wx.TOP, border=4);
+    self.time = wx.TextCtrl(panel, size=( 150, -1 ));
+    self.time.SetValue(time.strftime("%m/%d/%Y %H:%M:%S", time.gmtime(np.floor(marker_time/1000000000))));
+    sizer.Add(self.time, pos=( 0, 1 ));
+    sizer.Add(wx.StaticText(panel, label="Label"), pos=( 1, 0 ), border=4);
+    self.label = wx.TextCtrl(panel, size=( 150, -1));
+    self.label.SetValue(marker["label"]);
+    sizer.Add(self.label, pos=( 1, 1 ));
+
+    self.time.Bind(wx.EVT_KEY_DOWN, self.on_key_down);
+    self.label.Bind(wx.EVT_KEY_DOWN, self.on_key_down);
+
+    box_sizer.Add(sizer);
+    panel.SetSizer(box_sizer);
+    self.SetSize(( 202, 78 ));
+
+    self.label.SetFocus();
+
+  def on_key_down(self, e):
+    key_code = e.GetKeyCode();
+
+    if (key_code == wx.WXK_ESCAPE):
+      self.EndModal(wx.ID_CANCEL);
+      self.Close();
+    elif ((key_code == wx.WXK_RETURN) or (key_code == wx.WXK_NUMPAD_ENTER)):
+      # Verify no repeated labels
+      label = self.label.GetValue();
+      for marker in self.parent.markers:
+        if ((marker["label"] == label) and (self.parent.selected_marker != marker)):
+          wx.MessageBox("Label %s already used!" % ( label ), "Error", wx.OK | wx.ICON_ERROR);
+          return;
+
+      # Parse time and verify it is valid
+      try:
+        marker_time = time.strptime(self.time.GetValue(), "%m/%d/%Y %H:%M:%S");
+      except ValueError:
+        try:
+          marker_time = time.strptime(self.time.GetValue(), "%m/%d/%Y %H:%M");
+        except ValueError:
+          try:
+            marker_time = time.strptime(self.time.GetValue(), "%m/%d/%Y");
+          except:
+            marker_time = None;
+
+      if (marker_time is None):
+        wx.MessageBox("Invalid time", "Error", wx.OK | wx.ICON_ERROR);
+        return;
+
+      marker_time = calendar.timegm(marker_time) * 1000000000;
+      if (marker_time is not None):
+        self.time.SetValue(str(marker_time));
+        self.EndModal(wx.ID_OK);
+        self.Close();
+    else:
+      e.Skip();
+
+################################################################################
+################################ MARKERS DIALOG ################################
+################################################################################
+class MarkersDialog(wx.Dialog):
+
+  def __init__(self, markers, *args, **kwargs):
+    super(MarkersDialog, self).__init__(*args, **kwargs);
+
+    self.markers = markers;
+
+    self.create_gui();
+
+  def create_gui(self):
+    panel = wx.Panel(self);
+    box = wx.StaticBox(panel, label="Markers");
+    box_sizer = wx.StaticBoxSizer(box, wx.VERTICAL);
+
+    self.label = wx.TextCtrl(panel, size=( 150, -1 ));
+    box_sizer.Add(self.label);
+
+    labels = [ marker["label"] for marker in self.markers ];
+    labels.sort();
+    self.list = wx.ListBox(panel, choices=labels, size=( 150, 250 ));
+    box_sizer.Add(self.list);
+
+    self.label.SetFocus();
+    panel.SetSizer(box_sizer);
+    self.SetSize(( 161, 300 ));
+
+    self.Bind(wx.EVT_KEY_DOWN, self.on_key_down);
+
+  def on_key_down(self, e):
+    key_code = e.GetKeyCode();
+
+    if (key_code == wx.WXK_ESCAPE):
+      self.EndModal(wx.ID_CANCEL);
+      self.Close();
