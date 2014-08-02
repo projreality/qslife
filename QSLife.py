@@ -87,6 +87,7 @@ class QSLife(wx.Frame):
     dt = GraphDropTarget(self.graphs);
     self.graphs.SetDropTarget(dt);
     self.Bind(wx.EVT_TREE_BEGIN_DRAG, self.onDragInit, id=self.tree.GetId());
+    self.Bind(wx.EVT_TREE_ITEM_RIGHT_CLICK, self.onTreeItemRightClick, id=self.tree.GetId());
 
 ################################################################################
 ############################ GUI MISCELLANEOUS SETUP ###########################
@@ -259,6 +260,29 @@ class QSLife(wx.Frame):
     tds.SetData(tdo);
     tds.DoDragDrop(True);
 
+############################# TREE ITEM RIGHT CLICK ############################
+  def onTreeItemRightClick(self, e):
+    root = self.tree.GetRootItem();
+    item = e.GetItem();
+    if (item == root):
+      return;
+    category = self.tree.GetItemParent(item);
+    if (category == root):
+      return;
+    location = self.tree.GetItemParent(category);
+    if (location == root):
+      return;
+    self.selected_source = "/" + self.tree.GetItemText(location) + "/" + self.tree.GetItemText(category) + "/" + self.tree.GetItemText(item);
+
+    menu = wx.Menu();
+    menu_create_graph = menu.AppendItem(wx.MenuItem(menu, wx.ID_ANY, "Create new graph"));
+    self.Bind(wx.EVT_MENU, self.onCreateGraph, menu_create_graph);
+    self.PopupMenu(menu);
+
+  def onCreateGraph(self, e):
+    print self.selected_source;
+    config = dict(node=self.selected_source, new=True);
+    self.graphs.show_graph_options(config);
 
 if (__name__ == "__main__"):
   app = wx.App();

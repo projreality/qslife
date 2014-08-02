@@ -22,14 +22,24 @@ class GraphOptionsDialog(wx.Dialog):
     box_sizer = wx.StaticBoxSizer(box, wx.VERTICAL);
     sizer = wx.GridBagSizer(5, 5);
 
-    sizer.Add(wx.StaticText(panel, label="Value field"), pos=( 0, 0 ), flag=wx.LEFT | wx.TOP, border=4);
     fields = self._parent.hdfqs.get_fields(self.config["node"]);
     fields.remove("time");
     fields.sort();
+
+    if ("new" in self.config):
+      if ("value" in fields):
+        self.config["value"] = "value";
+      else:
+        self.config["value"] = fields[0];
+      self.config["valid"] = "";
+      self.config["yscale"] = [ 0, 1 ];
+
+    sizer.Add(wx.StaticText(panel, label="Value field"), pos=( 0, 0 ), flag=wx.LEFT | wx.TOP, border=4);
     self.value_field = wx.Choice(panel);
     self.value_field.SetItems(fields);
     self.value_field.SetStringSelection(self.config["value"]);
     sizer.Add(self.value_field, pos=( 0, 1 ), border=4);
+
 
     sizer.Add(wx.StaticText(panel, label="Valid condition"), pos=( 1, 0 ), border=4)
 
