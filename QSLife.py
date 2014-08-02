@@ -104,10 +104,7 @@ class QSLife(wx.Frame):
     temp = { };
     execfile(path, temp);
     self.current_file = temp["options"]["current_file"];
-    try:
-      self.load_file(self.current_file, temp["manifest"]);
-    except KeyError:
-      self.load_file(self.current_file);
+    self.load_file(self.current_file);
     self.graphs.set_options(temp["options"]);
     self.graphs.set_graph_config(temp["graph_config"]);
     self.graphs.set_graph_markers(temp["markers"]);
@@ -127,7 +124,6 @@ class QSLife(wx.Frame):
       fd.write("graph_config = " + repr(self.graphs.get_graph_config()) + "\n");
       fd.write("options = " + repr(self.graphs.get_options()) + "\n");
       fd.write("markers = " + repr(self.graphs.markers) + "\n");
-      fd.write("manifest = " + repr(self.hdfqs.manifest) + "\n");
       fd.close();
       self.SetStatusText("Saved configuration file \"" + path + "\"");
     except IOError:
@@ -136,7 +132,7 @@ class QSLife(wx.Frame):
 ################################################################################
 ################################### LOAD FILE ##################################
 ################################################################################
-  def load_file(self, path, manifest={ }):
+  def load_file(self, path):
     self.current_file = path;
     self.SetTitle(path);
 
@@ -146,7 +142,7 @@ class QSLife(wx.Frame):
     else:
       self.tree.DeleteAllItems();
 
-    self.hdfqs = HDFQS(path, manifest);
+    self.hdfqs = HDFQS(path);
     self.graphs.set_hdfqs(self.hdfqs);
     self.populate_tree();
 
