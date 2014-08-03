@@ -1,5 +1,4 @@
-import matplotlib;
-import numpy;
+import matplotlib as mpl;
 import os;
 import sys;
 from tables import *;
@@ -13,8 +12,8 @@ for path in os.listdir("lib"):
     if (subpath[-3:] == ".py"):
       exec("from " + subpath[:-3] + " import *;");
 
-matplotlib.interactive(True);
-matplotlib.use("WXAgg");
+mpl.interactive(True);
+mpl.use("WXAgg");
 
 from matplotlib.backends.backend_wxagg import FigureCanvasWxAgg;
 from matplotlib.figure import Figure;
