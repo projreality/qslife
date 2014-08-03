@@ -1,7 +1,7 @@
 import calendar;
 from math import *;
 import matplotlib as mpl;
-from numpy import *;
+import numpy as np;
 from operator import itemgetter;
 import os;
 import re;
@@ -9,8 +9,6 @@ from tables import *;
 import threading;
 import time;
 import wx;
-
-from matplotlib.pyplot import *;
 
 from GraphOptionsDialog import *;
 
@@ -215,7 +213,7 @@ class GraphWindow(mpl.backends.backend_wxagg.FigureCanvasWxAgg):
     with self.lock_data:
       self.data = [ ];
       for i in range(len(self.graph_config)):
-	self.data.append(transpose(array([ [ ], [ ] ])));
+	self.data.append(np.transpose(np.array([ [ ], [ ] ])));
     return self;
 
 ################################################################################
@@ -243,7 +241,7 @@ class GraphWindow(mpl.backends.backend_wxagg.FigureCanvasWxAgg):
       self.graph_config.insert(pos, config);
 
     with self.lock_data:
-      self.data.append(transpose(array([ [ ], [ ] ])));
+      self.data.append(np.transpose(np.array([ [ ], [ ] ])));
 
     self.load_data();
 
@@ -314,8 +312,8 @@ class GraphWindow(mpl.backends.backend_wxagg.FigureCanvasWxAgg):
     if (load):
       temp_data = [ ];
       for i in range(len(self.graph_config)):
-        temp_data.append(transpose(array([ [ ], [ ] ])))
-      for i in arange(len(self.graph_config)):
+        temp_data.append(np.transpose(np.array([ [ ], [ ] ])))
+      for i in np.arange(len(self.graph_config)):
         entry = self.graph_config[i];
         x = self.hdfqs.load(entry["node"], self.options["time_range"][0], self.options["time_range"][1], self.figure_width, entry["time"], entry["value"]);
         if (x.shape != ( 0, )):
@@ -323,13 +321,13 @@ class GraphWindow(mpl.backends.backend_wxagg.FigureCanvasWxAgg):
           if (mask_expr != ""):
             t = x[:,0];
             x = x[:,1];
-            x = ma.masked_where(~eval(mask_expr), x);
-            val = ma.concatenate(( t[:,newaxis], x[:,newaxis] ), axis=1);
+            x = np.ma.masked_where(~eval(mask_expr), x);
+            val = np.ma.concatenate(( t[:,np.newaxis], x[:,np.newaxis] ), axis=1);
           else:
             val = x;
         else:
           val = x;
-        val = array(sorted(val.tolist(), key=itemgetter(0)));
+        val = np.array(sorted(val.tolist(), key=itemgetter(0)));
         if (temp_data[i].shape == ( 0, 2 )):
           temp_data[i] = val;
         else:
@@ -369,12 +367,12 @@ class GraphWindow(mpl.backends.backend_wxagg.FigureCanvasWxAgg):
     with self.lock_data:
       data = list(self.data);
     self.plots = [ ];
-    for i in arange(self.options["top_graph"], num):
+    for i in np.arange(self.options["top_graph"], num):
       if ((i - self.options["top_graph"]) >= self.options["num_visible_graphs"]):
         break;
       subplot = self.figure.add_subplot(self.options["num_visible_graphs"], 1, i + 1 - self.options["top_graph"]);
       if (len(data[i]) == 0):
-	val = array([]);
+	val = np.array([]);
       else:
 	t = data[i][:,0];
 	val = data[i][:,1];
@@ -383,7 +381,7 @@ class GraphWindow(mpl.backends.backend_wxagg.FigureCanvasWxAgg):
 	val = val[disp];
 
       if (len(val) != 0):
-        valid = hstack(( True, diff(t) > 0 ));
+        valid = np.hstack(( True, np.diff(t) > 0 ));
         t = t[valid];
         val = val[valid];
 	subplot.plot(t, val);
@@ -530,8 +528,8 @@ class GraphWindow(mpl.backends.backend_wxagg.FigureCanvasWxAgg):
 	  if (mask_expr != ""):
 	    t = x[:,0];
 	    x = x[:,1];
-	    x = ma.masked_where(~eval(mask_expr), x);
-	    self.data[self.options["selected_graph"]] = ma.concatenate(( t[:,newaxis], x[:,newaxis] ), axis=1);
+	    x = np.ma.masked_where(~eval(mask_expr), x);
+	    self.data[self.options["selected_graph"]] = np.ma.concatenate(( t[:,np.newaxis], x[:,np.newaxis] ), axis=1);
         if (self.graph_config[self.options["selected_graph"]]["value"] != new_value):
           self.graph_config[self.options["selected_graph"]]["value"] = new_value;
           self.load_data(True);
@@ -594,7 +592,7 @@ class GraphWindow(mpl.backends.backend_wxagg.FigureCanvasWxAgg):
     tick_start = ceil(start/float(step_size))*step_size;
     stop = ceil(self.options["time_range"][1] /float(self.options["clip"]))*self.options["clip"];
     tick_stop = floor(stop/float(step_size))*step_size;
-    ticks = r_[tick_start:tick_stop+step_size:step_size];
+    ticks = np.r_[tick_start:tick_stop+step_size:step_size];
     labels = [ "" ] * len(ticks);
     i = 0;
     for tick in ticks:

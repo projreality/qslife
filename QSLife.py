@@ -1,5 +1,4 @@
 import matplotlib as mpl;
-import numpy;
 import os;
 import sys;
 from tables import *;
