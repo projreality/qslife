@@ -41,7 +41,7 @@ class GraphWindow(matplotlib.backends.backend_wxagg.FigureCanvasWxAgg):
     self.marker_lines = { };
     self.selected_marker = None;
     self.options["num_visible_graphs"] = 6;
-    self.options["time_range"] = ( 0, 60000 ); # time range to display data
+    self.options["time_range"] = ( 0, 60000000000 ); # time range to display data
     self.options["timezone"] = 0;
     self.options["selected_graph"] = None;
     self.options["top_graph"] = 0;
@@ -443,6 +443,7 @@ class GraphWindow(matplotlib.backends.backend_wxagg.FigureCanvasWxAgg):
     elif (key_code == wx.WXK_NUMPAD_SUBTRACT):
       gap = self.options["time_range"][1] - self.options["time_range"][0];
       self.options["time_range"] = ( self.options["time_range"][0] - gap/2, self.options["time_range"][1] + gap/2 );
+      print self.options["time_range"];
       self.load_data();
     # Move left
     elif ((key_code == wx.WXK_NUMPAD_LEFT) or (key_code == wx.WXK_NUMPAD4) or (key_code == wx.WXK_LEFT)):
