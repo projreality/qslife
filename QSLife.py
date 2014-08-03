@@ -53,9 +53,8 @@ class QSLife(wx.Frame):
     # Structure
     menu_file = wx.Menu();
     menu_file_new = menu_file.AppendItem(wx.MenuItem(menu_file, wx.ID_NEW, "&New\tCtrl+N"));
-    menu_file_open = menu_file.AppendItem(wx.MenuItem(menu_file, wx.ID_OPEN, "&Open config\tCtrl+O"));
-    menu_file_load = menu_file.AppendItem(wx.MenuItem(menu_file, wx.ID_ANY, "&Load HDFQS file\tCtrl+L"));
-    menu_file_save = menu_file.AppendItem(wx.MenuItem(menu_file, wx.ID_SAVE, "&Save config\tCtrl+S"));
+    menu_file_open = menu_file.AppendItem(wx.MenuItem(menu_file, wx.ID_OPEN, "&Open\tCtrl+O"));
+    menu_file_save = menu_file.AppendItem(wx.MenuItem(menu_file, wx.ID_SAVE, "&Save\tCtrl+S"));
     menu_file_save_as = menu_file.AppendItem(wx.MenuItem(menu_file, wx.ID_SAVEAS, "Save &As\tCtrl+A"));
     menu_file_exit = menu_file.AppendItem(wx.MenuItem(menu_file, wx.ID_EXIT, "E&xit\tCtrl+Q"));
     menubar.Append(menu_file, "&File");
@@ -63,7 +62,6 @@ class QSLife(wx.Frame):
     # Events
     self.Bind(wx.EVT_MENU, self.onFileNew, menu_file_new);
     self.Bind(wx.EVT_MENU, self.onFileOpen, menu_file_open);
-    self.Bind(wx.EVT_MENU, self.onFileLoad, menu_file_load);
     self.Bind(wx.EVT_MENU, self.onFileSave, menu_file_save);
     self.Bind(wx.EVT_MENU, self.onFileSaveAs, menu_file_save_as);
     self.Bind(wx.EVT_MENU, self.onFileExit, menu_file_exit);
@@ -172,19 +170,11 @@ class QSLife(wx.Frame):
 
 #################################### FILE NEW ##################################
   def onFileNew(self, e):
-    dialog = wx.FileDialog(None, "New HDFQS file group...", ".", style=wx.FD_SAVE);
+    dialog = wx.DirDialog(None, "Select HDFQS file group...", ".", style=wx.DD_DIR_MUST_EXIST);
     if (dialog.ShowModal() == wx.ID_OK):
       path = dialog.GetPath();
-      if (os.path.exists(path)):
-	dialog = wx.MessageDialog(None, "File \"" + path + "\" exists - overwrite?", "Confirm", wx.YES_NO);
-	if (dialog.ShowModal() != wx.ID_YES):
-	  return;
-      else:
-	os.mkdir(path);
-      HDFQS.initialize_file(path + "/index.h5");
       self.load_file(path);
-      self.statusbar.SetStatusText("Created new file \"" + path + "\"");
-    self.onFileSaveAs(e);
+      self.onFileSaveAs(e);
 
 ################################### FILE OPEN ##################################
   def onFileOpen(self, e):
@@ -194,18 +184,6 @@ class QSLife(wx.Frame):
       if (os.path.exists(path)):
 	self.open_config(path);
 	self.SetStatusText("Opened configuration file \"" + path + "\"");
-      else:
-	wx.MessageBox("File \"" + path + "\" does not exist", "Error", wx.OK | wx.ICON_EXCLAMATION);
-
-################################### FILE LOAD ##################################
-  def onFileLoad(self, e):
-    dialog = wx.FileDialog(None, "Load HDFQS file ...", ".", style=wx.FD_OPEN, wildcard="*.h5");
-    if (dialog.ShowModal() == wx.ID_OK):
-      path = dialog.GetPath();
-      if (os.path.exists(path)):
-	self.load_file(path);
-	self.graphs.update();
-	self.SetStatusText("Loaded file \"" + path + "\"");
       else:
 	wx.MessageBox("File \"" + path + "\" does not exist", "Error", wx.OK | wx.ICON_EXCLAMATION);
 
@@ -226,6 +204,7 @@ class QSLife(wx.Frame):
 	if (dialog.ShowModal() != wx.ID_YES):
 	  return;
       self.save_config(path);
+      self.current_config = path;
 
 ################################### FILE EXIT ##################################
   def onFileExit(self, e):
