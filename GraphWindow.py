@@ -1,6 +1,6 @@
 import calendar;
 from math import *;
-import matplotlib;
+import matplotlib as mpl;
 from numpy import *;
 from operator import itemgetter;
 import os;
@@ -14,13 +14,13 @@ from matplotlib.pyplot import *;
 
 from GraphOptionsDialog import *;
 
-class GraphWindow(matplotlib.backends.backend_wxagg.FigureCanvasWxAgg):
+class GraphWindow(mpl.backends.backend_wxagg.FigureCanvasWxAgg):
 
 ################################################################################
 ################################## CONSTRUCTOR #################################
 ################################################################################
   def __init__(self, parent, id):
-    self.figure = matplotlib.figure.Figure(None, None);
+    self.figure = mpl.figure.Figure(None, None);
     super(GraphWindow, self).__init__(parent, id, self.figure);
     size = tuple(parent.GetClientSize());
     self.SetSize(size);
@@ -443,7 +443,6 @@ class GraphWindow(matplotlib.backends.backend_wxagg.FigureCanvasWxAgg):
     elif (key_code == wx.WXK_NUMPAD_SUBTRACT):
       gap = self.options["time_range"][1] - self.options["time_range"][0];
       self.options["time_range"] = ( self.options["time_range"][0] - gap/2, self.options["time_range"][1] + gap/2 );
-      print self.options["time_range"];
       self.load_data();
     # Move left
     elif ((key_code == wx.WXK_NUMPAD_LEFT) or (key_code == wx.WXK_NUMPAD4) or (key_code == wx.WXK_LEFT)):
