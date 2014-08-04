@@ -588,11 +588,13 @@ class GraphWindow(mpl.backends.backend_wxagg.FigureCanvasWxAgg):
 ################################################################################
   def create_time_labels(self):
     step_size = self.calculate_step_size();
+    tz_offset = self.options["timezone"]*3600000000000L;
     start = floor(self.options["time_range"][0] / float(self.options["clip"]))*self.options["clip"];
-    tick_start = ceil(start/float(step_size))*step_size;
+    tick_start = ceil((start+tz_offset)/float(step_size))*step_size;
     stop = ceil(self.options["time_range"][1] /float(self.options["clip"]))*self.options["clip"];
-    tick_stop = floor(stop/float(step_size))*step_size;
+    tick_stop = floor((stop+tz_offset)/float(step_size))*step_size;
     ticks = np.r_[tick_start:tick_stop+step_size:step_size];
+    ticks = ticks - tz_offset;
     labels = [ "" ] * len(ticks);
     i = 0;
     for tick in ticks:
