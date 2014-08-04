@@ -35,7 +35,7 @@ class GraphWindow(mpl.backends.backend_wxagg.FigureCanvasWxAgg):
     self.options["clip"] = 1000000000;
     self.options["current_file"] = None;
     self.graph_config = [ ]; # List of data to graph
-    self.markers = [ ];
+    self.markers = { };
     self.marker_lines = { };
     self.selected_marker = None;
     self.options["num_visible_graphs"] = 6;
@@ -102,7 +102,8 @@ class GraphWindow(mpl.backends.backend_wxagg.FigureCanvasWxAgg):
     stop = self.options["time_range"][1];
     closest_marker = None;
     closest_x = 5;
-    for marker in self.markers:
+    for label in self.markers.keys():
+      marker = self.markers[label];
       marker_x = np.round(float(marker["time"] - start) / (stop - start) * self.figure_width); # pixel X position of marker
       if (np.abs(marker_x - x) < closest_x):
         closest_x = np.abs(marker_x - x);
@@ -118,7 +119,7 @@ class GraphWindow(mpl.backends.backend_wxagg.FigureCanvasWxAgg):
       marker["time"] = int(dialog.time.GetValue()) - self.options["timezone"] * 3600000;
       marker["label"] = dialog.label.GetValue();
       marker["color"] = "#FF0000";
-      self.markers.append(marker);
+      self.markers[marker["label"]] = marker;
       for subplot in self.plots:
         self.draw_marker_line(subplot, marker);
       self.draw_marker_text(self.plots[-1], marker);
@@ -136,7 +137,7 @@ class GraphWindow(mpl.backends.backend_wxagg.FigureCanvasWxAgg):
       marker["time"] = int(dialog.time.GetValue()) - self.options["timezone"] * 3600000;
       marker["label"] = dialog.label.GetValue();
       marker["color"] = "#FF0000";
-      self.markers.append(marker);
+      self.markers[marker["label"]] = marker;
       for subplot in self.plots:
         self.draw_marker_line(subplot, marker);
       self.draw_marker_text(self.plots[-1], marker);
@@ -398,12 +399,14 @@ class GraphWindow(mpl.backends.backend_wxagg.FigureCanvasWxAgg):
       ax.set_xticklabels(labels);
       ax.set_ylim(entry["yscale"]);
 
-      for marker in self.markers:
+      for label in self.markers.keys():
+        marker = self.markers[label];
         self.draw_marker_line(subplot, marker);
 
       self.plots.append(subplot);
 
-    for marker in self.markers:
+    for label in self.markers.keys():
+      marker = self.markers[label];
       self.draw_marker_text(subplot, marker);
     try:
       subplot.set_xlabel(date_label);
@@ -716,7 +719,8 @@ class CreateMarkerDialog(wx.Dialog):
     elif ((key_code == wx.WXK_RETURN) or (key_code == wx.WXK_NUMPAD_ENTER)):
       # Verify no repeated labels
       label = self.label.GetValue();
-      for marker in self.parent.markers:
+      for label in self.parent.markers.keys():
+        marker = self.parent.markers[label];
         if ((marker["label"] == label) and (self.parent.selected_marker != marker)):
           wx.MessageBox("Label %s already used!" % ( label ), "Error", wx.OK | wx.ICON_ERROR);
           return;
@@ -765,7 +769,7 @@ class MarkersDialog(wx.Dialog):
     self.label = wx.TextCtrl(panel, size=( 150, -1 ));
     box_sizer.Add(self.label);
 
-    labels = [ marker["label"] for marker in self.markers ];
+    labels = self.markers.keys();
     labels.sort();
     self.list = wx.ListBox(panel, choices=labels, size=( 150, 250 ));
     box_sizer.Add(self.list);
