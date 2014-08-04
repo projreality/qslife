@@ -572,12 +572,24 @@ class GraphWindow(mpl.backends.backend_wxagg.FigureCanvasWxAgg):
       step_size = 300;
     elif (gap <= 3600):
       step_size = 450;
-    elif (gap <= 8*3600):
+    elif (gap <= 2*3600):
+      step_size = 900;
+    elif (gap < 4*3600):
+      step_size = 1800;
+    elif (gap <= 12*3600):
       step_size = 3600;
     elif (gap <= 24*3600):
       step_size = 3*3600;
-    else:
+    elif (gap <= 36*3600):
+      step_size = 6*3600;
+    elif (gap <= 8*24*3600):
       step_size = 24*3600;
+    elif (gap <= 16*24*3600):
+      step_size = 2*24*3600;
+    elif (gap <= 60*24*3600):
+      step_size = 7*24*3600;
+    else:
+      step_size = 30*24*3600;
 
     step_size = step_size * 1000000000;
 
@@ -597,8 +609,12 @@ class GraphWindow(mpl.backends.backend_wxagg.FigureCanvasWxAgg):
     ticks = ticks - tz_offset;
     labels = [ "" ] * len(ticks);
     i = 0;
+    if (step_size < 86400000000000L):
+      fmt = "%H:%M:%S";
+    else:
+      fmt = "%m/%d/%Y";
     for tick in ticks:
-      labels[i] = time.strftime("%H:%M:%S", time.gmtime(tick/1000000000 + self.options["timezone"]*3600));
+      labels[i] = time.strftime(fmt, time.gmtime(tick/1000000000 + self.options["timezone"]*3600));
       i = i + 1;
 
     return ( ticks, labels );
