@@ -30,6 +30,7 @@ class GraphWindow(mpl.backends.backend_wxagg.FigureCanvasWxAgg):
 
     self.Bind(wx.EVT_KEY_DOWN, self.onKeyDown);
     self.Bind(wx.EVT_MOUSEWHEEL, self.onMouseWheel);
+    self.Bind(wx.EVT_LEFT_DCLICK, self.onDClick);
 
     self.options = { };
     self.options["clip"] = 1000000000;
@@ -47,15 +48,29 @@ class GraphWindow(mpl.backends.backend_wxagg.FigureCanvasWxAgg):
     self.data = None;
     self.data_range = None;
 
+    """
     self.mpl_connect("button_press_event", self.onClick);
     self.mpl_connect("button_release_event", self.onRelease);
     self.mpl_connect("motion_notify_event", self.onMouseMove);
+    """
 
     self.lock_data = threading.Lock();
 
     self.EVTTYPE_UPDATE = wx.NewEventType();
     self.EVT_UPDATE = wx.PyEventBinder(self.EVTTYPE_UPDATE, 1);
     self.Bind(self.EVT_UPDATE, self.onUpdate);
+
+################################################################################
+################################### ON DCLICK ##################################
+################################################################################
+  def onDClick(self, e):
+    x = e.GetPosition()[0];
+    closest_marker = self.find_nearby_marker(x - self.figure_x);
+    self.selected_marker = closest_marker;
+    if (closest_marker is None):
+      self.create_marker(x);
+    else:
+      self.edit_marker(closest_marker);
 
 ################################################################################
 ################################### ON UPDATE ##################################
@@ -66,17 +81,6 @@ class GraphWindow(mpl.backends.backend_wxagg.FigureCanvasWxAgg):
 ################################################################################
 ################################### ON CLICK ###################################
 ################################################################################
-  def onClick(self, e):
-    closest_marker = self.find_nearby_marker(e.x - self.figure_x);
-    if (e.guiEvent.LeftDClick()):
-      if (closest_marker is None):
-        self.create_marker(e);
-      else:
-        self.edit_marker(closest_marker);
-    else:
-      self.select_graph(e);
-      self.selected_marker = closest_marker;
-
   def onRelease(self, e):
     self.selected_marker = None;
 
@@ -111,14 +115,15 @@ class GraphWindow(mpl.backends.backend_wxagg.FigureCanvasWxAgg):
 
     return closest_marker;
 
-  def create_marker(self, e):
-    marker_time = self.x_to_time(e.x);
+  def create_marker(self, x):
+    marker_time = self.x_to_time(x);
     dialog = CreateMarkerDialog(self, marker_time + self.options["timezone"] * 3600000, None, title="New Marker");
     if (dialog.ShowModal() == wx.ID_OK):
       marker = { };
       marker["time"] = int(dialog.time.GetValue()) - self.options["timezone"] * 3600000;
       marker["label"] = dialog.label.GetValue();
-      marker["color"] = "#000000";
+      marker["color"] = dialog.color.GetColour().GetAsString();
+      marker["line"] = dialog.line.GetValue();
       self.markers[marker["label"]] = marker;
       for subplot in self.plots:
         self.draw_marker_line(subplot, marker);
@@ -126,7 +131,6 @@ class GraphWindow(mpl.backends.backend_wxagg.FigureCanvasWxAgg):
       self.draw();
 
   def edit_marker(self, marker):
-    self.selected_marker = marker;
     dialog = CreateMarkerDialog(self, marker["time"] + self.options["timezone"] * 3600000, None, title="Edit Marker", marker=marker);
     if (dialog.ShowModal() == wx.ID_OK):
       self.selected_marker = None;
@@ -136,7 +140,8 @@ class GraphWindow(mpl.backends.backend_wxagg.FigureCanvasWxAgg):
       self.marker_lines[marker["label"]] = [ ];
       marker["time"] = int(dialog.time.GetValue()) - self.options["timezone"] * 3600000;
       marker["label"] = dialog.label.GetValue();
-      marker["color"] = "#FF0000";
+      marker["color"] = dialog.color.GetColour().GetAsString();
+      marker["line"] = dialog.line.GetValue();
       self.markers[marker["label"]] = marker;
       for subplot in self.plots:
         self.draw_marker_line(subplot, marker);
@@ -415,11 +420,14 @@ class GraphWindow(mpl.backends.backend_wxagg.FigureCanvasWxAgg):
     self.draw();
 
   def draw_marker_line(self, subplot, marker):
-    l = subplot.axvline(x=marker["time"], ymin=-1000000, ymax=1000000, c=marker["color"], zorder=0, clip_on=False);
-    try:
-      self.marker_lines[marker["label"]].append(l);
-    except KeyError:
-      self.marker_lines[marker["label"]] = [ l ];
+    if (marker["line"]):
+      l = subplot.axvline(x=marker["time"], ymin=-1000000, ymax=1000000, c=marker["color"], zorder=0, clip_on=False);
+      try:
+        self.marker_lines[marker["label"]].append(l);
+      except KeyError:
+        self.marker_lines[marker["label"]] = [ l ];
+    elif (marker["label"] not in self.marker_lines):
+      self.marker_lines[marker["label"]] = [ ];
 
   def draw_marker_text(self, subplot, marker):
     xlim = subplot.get_axes().get_xlim();
@@ -683,7 +691,7 @@ class CreateMarkerDialog(wx.Dialog):
     if (kwargs.has_key("marker")):
       marker = kwargs.pop("marker");
     else:
-      marker = { "time": marker_time, "label": "", "color": "#FF0000" };
+      marker = { "time": marker_time, "label": "", "color": "#000000", "line": False };
 
     super(CreateMarkerDialog, self).__init__(*args, **kwargs);
 
@@ -692,7 +700,7 @@ class CreateMarkerDialog(wx.Dialog):
     panel = wx.Panel(self);
     box = wx.StaticBox(panel, label="Marker");
     box_sizer = wx.StaticBoxSizer(box, wx.VERTICAL);
-    sizer = wx.GridBagSizer(2, 2);
+    sizer = wx.GridBagSizer(4, 2);
 
     sizer.Add(wx.StaticText(panel, label="Time"), pos=( 0, 0 ), flag=wx.LEFT | wx.TOP, border=4);
     self.time = wx.TextCtrl(panel, size=( 150, -1 ));
@@ -702,13 +710,21 @@ class CreateMarkerDialog(wx.Dialog):
     self.label = wx.TextCtrl(panel, size=( 150, -1));
     self.label.SetValue(marker["label"]);
     sizer.Add(self.label, pos=( 1, 1 ));
+    sizer.Add(wx.StaticText(panel, label="Color"), pos=( 2, 0 ), border=4);
+    self.color = wx.ColourPickerCtrl(panel, wx.ID_ANY, wx.BLACK, wx.DefaultPosition, wx.DefaultSize, wx.CLRP_DEFAULT_STYLE | wx.CLRP_SHOW_LABEL);
+    self.color.SetColour(marker["color"]);
+    sizer.Add(self.color, pos=( 2, 1 ));
+    sizer.Add(wx.StaticText(panel, label="Line"), pos=( 3, 0 ), border=4);
+    self.line = wx.CheckBox(panel, label="");
+    self.line.SetValue(marker["line"]);
+    sizer.Add(self.line, pos=( 3, 1 ));
 
     self.time.Bind(wx.EVT_KEY_DOWN, self.on_key_down);
     self.label.Bind(wx.EVT_KEY_DOWN, self.on_key_down);
 
     box_sizer.Add(sizer);
     panel.SetSizer(box_sizer);
-    self.SetSize(( 202, 78 ));
+    self.SetSize(( 202, 156 ));
 
     self.label.SetFocus();
 
@@ -721,6 +737,7 @@ class CreateMarkerDialog(wx.Dialog):
     elif ((key_code == wx.WXK_RETURN) or (key_code == wx.WXK_NUMPAD_ENTER)):
       # Verify no repeated labels
       label = self.label.GetValue();
+      line = self.line.GetValue();
       for marker_label in self.parent.markers.keys():
         marker = self.parent.markers[marker_label];
         if ((marker_label == label) and (self.parent.selected_marker != marker)):
