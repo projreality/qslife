@@ -31,6 +31,9 @@ class GraphWindow(mpl.backends.backend_wxagg.FigureCanvasWxAgg):
     self.Bind(wx.EVT_KEY_DOWN, self.onKeyDown);
     self.Bind(wx.EVT_MOUSEWHEEL, self.onMouseWheel);
     self.Bind(wx.EVT_LEFT_DCLICK, self.onDClick);
+    self.Bind(wx.EVT_LEFT_DOWN, self.onMouseDown);
+    self.Bind(wx.EVT_MOTION, self.onMouseMove);
+    self.Bind(wx.EVT_LEFT_UP, self.onMouseUp);
 
     self.options = { };
     self.options["clip"] = 1000000000;
@@ -48,12 +51,6 @@ class GraphWindow(mpl.backends.backend_wxagg.FigureCanvasWxAgg):
     self.data = None;
     self.data_range = None;
 
-    """
-    self.mpl_connect("button_press_event", self.onClick);
-    self.mpl_connect("button_release_event", self.onRelease);
-    self.mpl_connect("motion_notify_event", self.onMouseMove);
-    """
-
     self.lock_data = threading.Lock();
 
     self.EVTTYPE_UPDATE = wx.NewEventType();
@@ -66,30 +63,37 @@ class GraphWindow(mpl.backends.backend_wxagg.FigureCanvasWxAgg):
   def onDClick(self, e):
     x = e.GetPosition()[0];
     closest_marker = self.find_nearby_marker(x - self.figure_x);
-    self.selected_marker = closest_marker;
     if (closest_marker is None):
       self.create_marker(x);
     else:
       self.edit_marker(closest_marker);
 
 ################################################################################
-################################### ON UPDATE ##################################
+################################ ON MOUSE DOWN #################################
 ################################################################################
-  def onUpdate(self, e):
-    self.update();
+  def onMouseDown(self, e):
+    x = e.GetPosition()[0];
+    self.selected_marker = self.find_nearby_marker(x - self.figure_x);
 
 ################################################################################
-################################### ON CLICK ###################################
+################################ ON MOUSE MOVE #################################
 ################################################################################
-  def onRelease(self, e):
+  def onMouseMove(self, e):
+    x = e.GetPosition()[0];
+    if (self.selected_marker is not None):
+      t = self.x_to_time(x);
+      time_range = self.options["time_range"];
+      self.move_marker(self.selected_marker, self.x_to_time(x));
+
+################################################################################
+################################# ON MOUSE UP ##################################
+################################################################################
+  def onMouseUp(self, e):
     self.selected_marker = None;
 
-  def onMouseMove(self, e):
-    if (self.selected_marker is not None):
-      t = self.x_to_time(e.x);
-      time_range = self.options["time_range"];
-      self.move_marker(self.selected_marker, self.x_to_time(e.x));
-
+################################################################################
+################################# MOVE MARKER ##################################
+################################################################################
   def move_marker(self, marker, t):
     for l in self.marker_lines[marker["label"]]:
       l.remove();
@@ -165,6 +169,12 @@ class GraphWindow(mpl.backends.backend_wxagg.FigureCanvasWxAgg):
       self.options["selected_graph"] = sel;
     else:
       self.options["selected_graph"] = None;
+
+################################################################################
+################################### ON UPDATE ##################################
+################################################################################
+  def onUpdate(self, e):
+    self.update();
 
 ################################################################################
 ################################ ON MOUSE WHEEL ################################
