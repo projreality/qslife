@@ -118,7 +118,7 @@ class GraphWindow(mpl.backends.backend_wxagg.FigureCanvasWxAgg):
       marker = { };
       marker["time"] = int(dialog.time.GetValue()) - self.options["timezone"] * 3600000;
       marker["label"] = dialog.label.GetValue();
-      marker["color"] = "#FF0000";
+      marker["color"] = "#000000";
       self.markers[marker["label"]] = marker;
       for subplot in self.plots:
         self.draw_marker_line(subplot, marker);
@@ -425,8 +425,9 @@ class GraphWindow(mpl.backends.backend_wxagg.FigureCanvasWxAgg):
     xlim = subplot.get_axes().get_xlim();
     x = marker["time"] + (xlim[1] - xlim[0]) / 100;
     ylim = subplot.get_axes().get_ylim();
-    y = ylim[0] - (ylim[1] - ylim[0])/1.2;
-    t = self.plots[-1].text(x, y, marker["label"], color=marker["color"], zorder=0, clip_on=False);
+    y = ylim[0] - (ylim[1] - ylim[0])/1.4;
+    props = dict(boxstyle="round", facecolor="wheat", alpha=0.5);
+    t = self.plots[-1].text(x, y, marker["label"], color=marker["color"], zorder=0, clip_on=False, bbox=props);
     self.marker_lines[marker["label"]].append(t);
 
 ################################################################################
