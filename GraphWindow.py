@@ -784,7 +784,8 @@ class MarkersDialog(wx.Dialog):
     panel.SetSizer(box_sizer);
     self.SetSize(( 161, 300 ));
 
-    self.Bind(wx.EVT_KEY_DOWN, self.on_key_down);
+    self.label.Bind(wx.EVT_KEY_DOWN, self.on_key_down);
+    self.list.Bind(wx.EVT_KEY_DOWN, self.on_key_down);
     self.Bind(wx.EVT_LIST_ITEM_ACTIVATED, self.on_select, self.list);
 
   def on_key_down(self, e):
