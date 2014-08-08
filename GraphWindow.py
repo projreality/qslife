@@ -511,8 +511,9 @@ class GraphWindow(mpl.backends.backend_wxagg.FigureCanvasWxAgg):
 	  self.update();
     # List markers
     elif (key_code == 77):
-      dialog = MarkersDialog(self.markers, None);
-      dialog.ShowModal();
+      dialog = MarkersDialog(self, self.markers, None);
+      if (dialog.ShowModal() == wx.ID_OK):
+        self.update();
     else:
       e.Skip();
 
@@ -719,9 +720,9 @@ class CreateMarkerDialog(wx.Dialog):
     elif ((key_code == wx.WXK_RETURN) or (key_code == wx.WXK_NUMPAD_ENTER)):
       # Verify no repeated labels
       label = self.label.GetValue();
-      for label in self.parent.markers.keys():
-        marker = self.parent.markers[label];
-        if ((marker["label"] == label) and (self.parent.selected_marker != marker)):
+      for marker_label in self.parent.markers.keys():
+        marker = self.parent.markers[marker_label];
+        if ((marker_label == label) and (self.parent.selected_marker != marker)):
           wx.MessageBox("Label %s already used!" % ( label ), "Error", wx.OK | wx.ICON_ERROR);
           return;
 
@@ -754,9 +755,10 @@ class CreateMarkerDialog(wx.Dialog):
 ################################################################################
 class MarkersDialog(wx.Dialog):
 
-  def __init__(self, markers, *args, **kwargs):
+  def __init__(self, parent, markers, *args, **kwargs):
     super(MarkersDialog, self).__init__(*args, **kwargs);
 
+    self.parent = parent;
     self.markers = markers;
 
     self.create_gui();
@@ -771,7 +773,11 @@ class MarkersDialog(wx.Dialog):
 
     labels = self.markers.keys();
     labels.sort();
-    self.list = wx.ListBox(panel, choices=labels, size=( 150, 250 ));
+    self.list = wx.ListCtrl(panel, size=( 150, 250 ));
+    self.list.Show(True);
+    self.list.InsertColumn(0, "Marker");
+    for name in self.markers.keys():
+      self.list.InsertStringItem(0, name);
     box_sizer.Add(self.list);
 
     self.label.SetFocus();
@@ -779,6 +785,7 @@ class MarkersDialog(wx.Dialog):
     self.SetSize(( 161, 300 ));
 
     self.Bind(wx.EVT_KEY_DOWN, self.on_key_down);
+    self.Bind(wx.EVT_LIST_ITEM_ACTIVATED, self.on_select, self.list);
 
   def on_key_down(self, e):
     key_code = e.GetKeyCode();
@@ -786,3 +793,14 @@ class MarkersDialog(wx.Dialog):
     if (key_code == wx.WXK_ESCAPE):
       self.EndModal(wx.ID_CANCEL);
       self.Close();
+    else:
+      e.Skip();
+
+  def on_select(self, e):
+    label = e.GetText();
+    marker = self.markers[label];
+    time_range = self.parent.options["time_range"];
+    span = time_range[1] - time_range[0];
+    self.parent.options["time_range"] = [ marker["time"] - int(np.ceil(span/2.0)), marker["time"] + int(np.floor(span/2.0)) ];
+    self.EndModal(wx.ID_OK);
+    self.Close();
