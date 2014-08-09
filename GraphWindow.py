@@ -41,7 +41,7 @@ class GraphWindow(mpl.backends.backend_wxagg.FigureCanvasWxAgg):
     self.graph_config = [ ]; # List of data to graph
     self.markers = { };
     self.marker_lines = { };
-    self.marker_labels = { };
+    self.marker_labels = [ ];
     self.selected_marker = None;
     self.click_position = 0;
     self.options["num_visible_graphs"] = 6;
@@ -109,7 +109,8 @@ class GraphWindow(mpl.backends.backend_wxagg.FigureCanvasWxAgg):
     self.click_position = t;
     for subplot in self.plots:
       self.draw_marker_line(subplot, marker);
-    self.draw_marker_text(self.plots[-1], marker);
+    self.draw_marker_text(self.plots[-1], marker, "bottom");
+    self.draw_marker_text(self.plots[0], marker, "top");
     self.draw();
 
   def find_nearby_marker(self, x, y):
@@ -124,10 +125,9 @@ class GraphWindow(mpl.backends.backend_wxagg.FigureCanvasWxAgg):
         closest_x = np.abs(marker_x - x);
         closest_marker = marker;
 
-    if ((closest_marker is None) and (871 <= y <= 889)):
+    if ((closest_marker is None) and ((871 <= y <= 889) or (13 <= y <= 31))):
       x = x + self.figure_x;
-      for label in self.marker_labels:
-        bbox = self.marker_labels[label];
+      for ( bbox, label ) in self.marker_labels:
         if (np.floor(bbox.x0) <= x <= np.ceil(bbox.x1)):
           closest_marker = self.markers[label];
 
@@ -145,7 +145,8 @@ class GraphWindow(mpl.backends.backend_wxagg.FigureCanvasWxAgg):
       self.markers[marker["label"]] = marker;
       for subplot in self.plots:
         self.draw_marker_line(subplot, marker);
-      self.draw_marker_text(self.plots[-1], marker);
+      self.draw_marker_text(self.plots[-1], marker, "bottom");
+      self.draw_marker_text(self.plots[0], marker, "top");
       self.draw();
 
   def edit_marker(self, marker):
@@ -162,7 +163,8 @@ class GraphWindow(mpl.backends.backend_wxagg.FigureCanvasWxAgg):
       self.markers[marker["label"]] = marker;
       for subplot in self.plots:
         self.draw_marker_line(subplot, marker);
-      self.draw_marker_text(self.plots[-1], marker);
+      self.draw_marker_text(self.plots[-1], marker, "bottom");
+      self.draw_marker_text(self.plots[0], marker, "top");
       self.draw();
     self.selected_marker = None;
 
@@ -436,7 +438,8 @@ class GraphWindow(mpl.backends.backend_wxagg.FigureCanvasWxAgg):
 
     for label in self.markers.keys():
       marker = self.markers[label];
-      self.draw_marker_text(subplot, marker);
+      self.draw_marker_text(self.plots[-1], marker, "bottom");
+      self.draw_marker_text(self.plots[0], marker, "top");
     try:
       subplot.set_xlabel(date_label);
     except UnboundLocalError:
@@ -453,15 +456,18 @@ class GraphWindow(mpl.backends.backend_wxagg.FigureCanvasWxAgg):
     elif (marker["label"] not in self.marker_lines):
       self.marker_lines[marker["label"]] = [ ];
 
-  def draw_marker_text(self, subplot, marker):
+  def draw_marker_text(self, subplot, marker, location):
     xlim = subplot.get_axes().get_xlim();
     x = marker["time"] + (xlim[1] - xlim[0]) / 100;
     ylim = subplot.get_axes().get_ylim();
-    y = ylim[0] - (ylim[1] - ylim[0])/1.4;
+    if (location == "bottom"):
+      y = ylim[0] - (ylim[1] - ylim[0])/1.4;
+    elif (location == "top"):
+      y = ylim[1] + (ylim[1] - ylim[0])/1.6;
     props = dict(boxstyle="round", facecolor="wheat", alpha=0.5);
-    t = self.plots[-1].text(x, y, marker["label"], color=marker["color"], zorder=0, clip_on=False, bbox=props);
+    t = subplot.text(x, y, marker["label"], color=marker["color"], zorder=0, clip_on=False, bbox=props);
     self.marker_lines[marker["label"]].append(t);
-    self.marker_labels[marker["label"]] = t.get_window_extent(renderer=self.figure.canvas.get_renderer());
+    self.marker_labels.append([ t.get_window_extent(renderer=self.figure.canvas.get_renderer()), marker["label"] ]);
 
 ################################################################################
 #################################### KEY DOWN ##################################
