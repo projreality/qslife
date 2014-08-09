@@ -41,6 +41,7 @@ class GraphWindow(mpl.backends.backend_wxagg.FigureCanvasWxAgg):
     self.graph_config = [ ]; # List of data to graph
     self.markers = { };
     self.marker_lines = { };
+    self.marker_labels = { };
     self.selected_marker = None;
     self.options["num_visible_graphs"] = 6;
     self.options["time_range"] = ( 0, 60000000000 ); # time range to display data
@@ -62,7 +63,9 @@ class GraphWindow(mpl.backends.backend_wxagg.FigureCanvasWxAgg):
 ################################################################################
   def onDClick(self, e):
     x = e.GetPosition()[0];
-    closest_marker = self.find_nearby_marker(x - self.figure_x);
+    y = e.GetPosition()[1];
+    closest_marker = self.find_nearby_marker(x - self.figure_x, y);
+    self.selected_marker = closest_marker;
     if (closest_marker is None):
       self.create_marker(x);
     else:
@@ -73,7 +76,8 @@ class GraphWindow(mpl.backends.backend_wxagg.FigureCanvasWxAgg):
 ################################################################################
   def onMouseDown(self, e):
     x = e.GetPosition()[0];
-    self.selected_marker = self.find_nearby_marker(x - self.figure_x);
+    y = e.GetPosition()[1];
+    self.selected_marker = self.find_nearby_marker(x - self.figure_x, y);
 
 ################################################################################
 ################################ ON MOUSE MOVE #################################
@@ -105,7 +109,7 @@ class GraphWindow(mpl.backends.backend_wxagg.FigureCanvasWxAgg):
     self.draw_marker_text(self.plots[-1], marker);
     self.draw();
 
-  def find_nearby_marker(self, x):
+  def find_nearby_marker(self, x, y):
     start = self.options["time_range"][0];
     stop = self.options["time_range"][1];
     closest_marker = None;
@@ -116,6 +120,13 @@ class GraphWindow(mpl.backends.backend_wxagg.FigureCanvasWxAgg):
       if (np.abs(marker_x - x) < closest_x):
         closest_x = np.abs(marker_x - x);
         closest_marker = marker;
+
+    if ((closest_marker is None) and (871 <= y <= 889)):
+      x = x + self.figure_x;
+      for label in self.marker_labels:
+        bbox = self.marker_labels[label];
+        if (np.floor(bbox.x0) <= x <= np.ceil(bbox.x1)):
+          closest_marker = self.markers[label];
 
     return closest_marker;
 
@@ -137,7 +148,6 @@ class GraphWindow(mpl.backends.backend_wxagg.FigureCanvasWxAgg):
   def edit_marker(self, marker):
     dialog = CreateMarkerDialog(self, marker["time"] + self.options["timezone"] * 3600000, None, title="Edit Marker", marker=marker);
     if (dialog.ShowModal() == wx.ID_OK):
-      self.selected_marker = None;
       for l in self.marker_lines[marker["label"]]:
         l.remove();
         del l;
@@ -151,6 +161,7 @@ class GraphWindow(mpl.backends.backend_wxagg.FigureCanvasWxAgg):
         self.draw_marker_line(subplot, marker);
       self.draw_marker_text(self.plots[-1], marker);
       self.draw();
+    self.selected_marker = None;
 
   def x_to_time(self, x):
     pos = (x - self.figure_x) / self.figure_width;
@@ -447,6 +458,7 @@ class GraphWindow(mpl.backends.backend_wxagg.FigureCanvasWxAgg):
     props = dict(boxstyle="round", facecolor="wheat", alpha=0.5);
     t = self.plots[-1].text(x, y, marker["label"], color=marker["color"], zorder=0, clip_on=False, bbox=props);
     self.marker_lines[marker["label"]].append(t);
+    self.marker_labels[marker["label"]] = t.get_window_extent(renderer=self.figure.canvas.get_renderer());
 
 ################################################################################
 #################################### KEY DOWN ##################################
