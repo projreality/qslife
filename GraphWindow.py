@@ -43,6 +43,7 @@ class GraphWindow(mpl.backends.backend_wxagg.FigureCanvasWxAgg):
     self.marker_lines = { };
     self.marker_labels = { };
     self.selected_marker = None;
+    self.click_position = 0;
     self.options["num_visible_graphs"] = 6;
     self.options["time_range"] = ( 0, 60000000000 ); # time range to display data
     self.options["timezone"] = 0;
@@ -78,6 +79,7 @@ class GraphWindow(mpl.backends.backend_wxagg.FigureCanvasWxAgg):
     x = e.GetPosition()[0];
     y = e.GetPosition()[1];
     self.selected_marker = self.find_nearby_marker(x - self.figure_x, y);
+    self.click_position = self.x_to_time(x);
 
 ################################################################################
 ################################ ON MOUSE MOVE #################################
@@ -103,7 +105,8 @@ class GraphWindow(mpl.backends.backend_wxagg.FigureCanvasWxAgg):
       l.remove();
       del l;
     self.marker_lines[marker["label"]] = [ ];
-    marker["time"] = t;
+    marker["time"] += t - self.click_position;
+    self.click_position = t;
     for subplot in self.plots:
       self.draw_marker_line(subplot, marker);
     self.draw_marker_text(self.plots[-1], marker);
