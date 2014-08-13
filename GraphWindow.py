@@ -80,6 +80,8 @@ class GraphWindow(mpl.backends.backend_wxagg.FigureCanvasWxAgg):
     y = e.GetPosition()[1];
     self.selected_marker = self.find_nearby_marker(x - self.figure_x, y);
     self.click_position = self.x_to_time(x);
+    if (self.selected_marker is None):
+      self.select_graph(e);
 
 ################################################################################
 ################################ ON MOUSE MOVE #################################
@@ -176,11 +178,11 @@ class GraphWindow(mpl.backends.backend_wxagg.FigureCanvasWxAgg):
 
   def select_graph(self, e):
     ( max_x, max_y ) = self.GetSize();
-    x = e.x;
-    y = max_y - e.y;
+    x = e.GetPosition()[0];
+    y = e.GetPosition()[1];
     top = 86; # Offset from top and bottom
     bottom = 75;
-    sel = int(floor((y - top) / (max_y - top - bottom) * self.options["num_visible_graphs"] + self.options["top_graph"]));
+    sel = int(floor(float(y - top) / (max_y - top - bottom) * self.options["num_visible_graphs"] + self.options["top_graph"]));
     if ((sel >= self.options["top_graph"]) and ((sel - self.options["top_graph"]) < self.options["num_visible_graphs"])):
       self.options["selected_graph"] = sel;
     else:
