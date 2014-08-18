@@ -575,6 +575,8 @@ class GraphWindow(mpl.backends.backend_wxagg.FigureCanvasWxAgg):
         if (self.graph_config[self.options["selected_graph"]]["valid"] != mask_expr):
           self.graph_config[self.options["selected_graph"]]["valid"] = mask_expr;
 	  x = self.data[self.options["selected_graph"]];
+          if (type(x) == np.ndarray):
+            x = np.ma.array(x);
 	  x.mask = False;
 	  if (mask_expr != ""):
 	    t = x[:,0];
