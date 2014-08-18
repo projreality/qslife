@@ -423,7 +423,9 @@ class GraphWindow(mpl.backends.backend_wxagg.FigureCanvasWxAgg):
         val = val[valid];
 	subplot.plot(t, val);
 
-      subplot.get_axes().set_xlim(self.options["time_range"]);
+      ax = subplot.get_axes();
+      ax.set_xlim(self.options["time_range"]);
+      ax.ticklabel_format(useOffset=False);
       entry = self.graph_config[i];
       result = re.search("^/([A-Za-z0-9]+)/([A-Za-z0-9]+)/([A-Za-z0-9_]+?)(_([A-Za-z0-9]+))?$", entry["node"]).groups();
       if (result[4] is not None):
