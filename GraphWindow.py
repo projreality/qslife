@@ -130,7 +130,8 @@ class GraphWindow(mpl.backends.backend_wxagg.FigureCanvasWxAgg):
         closest_x = np.abs(marker_x - x);
         closest_marker = marker;
 
-    if ((closest_marker is None) and ((871 <= y <= 889) or (13 <= y <= 31))):
+    bottom = self.options["num_visible_graphs"] - (len(self.graph_config) - self.options["top_graph"]);
+    if ((closest_marker is None) and (((bottom <= 0) and (871 <= y <= 889)) or ((bottom == 1) and (749 <= y <= 766)) or ((bottom == 2) and (626 <= y <= 642)) or ((bottom == 3) and (502 <= y <= 519)) or ((bottom == 4) and (379 <= y <= 395)) or ((bottom == 5) and (255 <= y <= 272)) or (13 <= y <= 31))):
       x = x + self.figure_x;
       for ( bbox, label ) in self.marker_labels:
         if (np.floor(bbox.x0) <= x <= np.ceil(bbox.x1)):
