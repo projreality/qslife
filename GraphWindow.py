@@ -107,7 +107,10 @@ class GraphWindow(mpl.backends.backend_wxagg.FigureCanvasWxAgg):
 ################################################################################
   def move_marker(self, marker, t):
     for l in self.marker_lines[marker["label"]]:
-      l.remove();
+      try:
+        l.remove();
+      except ValueError:
+        pass;
       del l;
     self.marker_lines[marker["label"]] = [ ];
     marker["time"] += t - self.click_position;
