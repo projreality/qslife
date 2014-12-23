@@ -354,6 +354,7 @@ class GraphWindow(mpl.backends.backend_wxagg.FigureCanvasWxAgg):
         entry = self.graph_config[i];
         x = self.hdfqs.load(entry["node"], self.options["time_range"][0], self.options["time_range"][1], self.figure_width, entry["time"], entry["value"]);
         if (x.shape != ( 0, )):
+          x = np.array(sorted(x.tolist(), key=itemgetter(0)));
           mask_expr = self.graph_config[i]["valid"];
           if (mask_expr != ""):
             t = x[:,0];
@@ -364,7 +365,6 @@ class GraphWindow(mpl.backends.backend_wxagg.FigureCanvasWxAgg):
             val = x;
         else:
           val = x;
-        val = np.array(sorted(val.tolist(), key=itemgetter(0)));
         if (temp_data[i].shape == ( 0, 2 )):
           temp_data[i] = val;
         else:
