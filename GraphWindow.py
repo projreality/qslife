@@ -560,6 +560,7 @@ class GraphWindow(mpl.backends.backend_wxagg.FigureCanvasWxAgg):
     elif (key_code == 77):
       dialog = MarkersDialog(self, self.markers, None);
       if (dialog.ShowModal() == wx.ID_OK):
+        self.load_data();
         self.update();
     else:
       e.Skip();
