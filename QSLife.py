@@ -25,6 +25,7 @@ from matplotlib.figure import Figure;
 
 from GraphWindow import GraphWindow;
 from HDFQS import *;
+from PreferencesDialog import PreferencesDialog;
 
 class QSLife(wx.Frame):
 
@@ -58,10 +59,17 @@ class QSLife(wx.Frame):
     menu_file = wx.Menu();
     menu_file_new = menu_file.AppendItem(wx.MenuItem(menu_file, wx.ID_NEW, "&New\tCtrl+N"));
     menu_file_open = menu_file.AppendItem(wx.MenuItem(menu_file, wx.ID_OPEN, "&Open\tCtrl+O"));
+    menu_file.AppendSeparator();
     menu_file_save = menu_file.AppendItem(wx.MenuItem(menu_file, wx.ID_SAVE, "&Save\tCtrl+S"));
     menu_file_save_as = menu_file.AppendItem(wx.MenuItem(menu_file, wx.ID_SAVEAS, "Save &As\tCtrl+A"));
+    menu_file.AppendSeparator();
     menu_file_exit = menu_file.AppendItem(wx.MenuItem(menu_file, wx.ID_EXIT, "E&xit\tCtrl+Q"));
     menubar.Append(menu_file, "&File");
+
+    menu_edit = wx.Menu();
+    self.menu_edit_preferences = menu_edit.AppendItem(wx.MenuItem(menu_edit, wx.ID_PREFERENCES, "&Preferences"));
+    self.menu_edit_preferences.Enable(False);
+    menubar.Append(menu_edit, "&Edit");
 
     # Events
     self.Bind(wx.EVT_MENU, self.onFileNew, menu_file_new);
@@ -69,6 +77,7 @@ class QSLife(wx.Frame):
     self.Bind(wx.EVT_MENU, self.onFileSave, menu_file_save);
     self.Bind(wx.EVT_MENU, self.onFileSaveAs, menu_file_save_as);
     self.Bind(wx.EVT_MENU, self.onFileExit, menu_file_exit);
+    self.Bind(wx.EVT_MENU, self.onEditPreferences, self.menu_edit_preferences);
 
 ################################ FINISH MENUBAR ################################
     self.SetMenuBar(menubar);
@@ -188,6 +197,7 @@ class QSLife(wx.Frame):
       if (os.path.exists(path)):
 	self.open_config(path);
 	self.SetStatusText("Opened configuration file \"" + path + "\"");
+        self.menu_edit_preferences.Enable(True);
       else:
 	wx.MessageBox("File \"" + path + "\" does not exist", "Error", wx.OK | wx.ICON_EXCLAMATION);
 
@@ -213,6 +223,11 @@ class QSLife(wx.Frame):
 ################################### FILE EXIT ##################################
   def onFileExit(self, e):
     self.Close();
+
+############################### EDIT PREFERENCES ###############################
+  def onEditPreferences(self, e):
+    dialog = PreferencesDialog(self.graphs.options, None, title="Preferences");
+    dialog.Show();
 
 #################################### IMPORT ####################################
   def onImport(self, e):
