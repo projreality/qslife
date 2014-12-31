@@ -228,7 +228,7 @@ man_pages = [
 #  dir menu entry, description, category)
 texinfo_documents = [
   ('index', 'QSLife', u'QSLife Documentation',
-   u'Samuel Li', 'QSLife', 'One line description of project.',
+   u'Samuel Li', 'QSLife', 'Quantified Self data viewer.',
    'Miscellaneous'),
 ]
 
