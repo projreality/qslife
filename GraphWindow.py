@@ -30,14 +30,20 @@ class GraphWindow(mpl.backends.backend_wxagg.FigureCanvasWxAgg):
 
     self.Bind(wx.EVT_KEY_DOWN, self.onKeyDown);
     self.Bind(wx.EVT_MOUSEWHEEL, self.onMouseWheel);
+    self.Bind(wx.EVT_LEFT_DCLICK, self.onDClick);
+    self.Bind(wx.EVT_LEFT_DOWN, self.onMouseDown);
+    self.Bind(wx.EVT_MOTION, self.onMouseMove);
+    self.Bind(wx.EVT_LEFT_UP, self.onMouseUp);
 
     self.options = { };
     self.options["clip"] = 1000000000;
     self.options["current_file"] = None;
     self.graph_config = [ ]; # List of data to graph
-    self.markers = [ ];
+    self.markers = { };
     self.marker_lines = { };
+    self.marker_labels = [ ];
     self.selected_marker = None;
+    self.click_position = 0;
     self.options["num_visible_graphs"] = 6;
     self.options["time_range"] = ( 0, 60000000000 ); # time range to display data
     self.options["timezone"] = 0;
@@ -47,10 +53,6 @@ class GraphWindow(mpl.backends.backend_wxagg.FigureCanvasWxAgg):
     self.data = None;
     self.data_range = None;
 
-    self.mpl_connect("button_press_event", self.onClick);
-    self.mpl_connect("button_release_event", self.onRelease);
-    self.mpl_connect("motion_notify_event", self.onMouseMove);
-
     self.lock_data = threading.Lock();
 
     self.EVTTYPE_UPDATE = wx.NewEventType();
@@ -58,89 +60,122 @@ class GraphWindow(mpl.backends.backend_wxagg.FigureCanvasWxAgg):
     self.Bind(self.EVT_UPDATE, self.onUpdate);
 
 ################################################################################
-################################### ON UPDATE ##################################
+################################### ON DCLICK ##################################
 ################################################################################
-  def onUpdate(self, e):
-    self.update();
-
-################################################################################
-################################### ON CLICK ###################################
-################################################################################
-  def onClick(self, e):
-    closest_marker = self.find_nearby_marker(e.x - self.figure_x);
-    if (e.guiEvent.LeftDClick()):
-      if (closest_marker is None):
-        self.create_marker(e);
-      else:
-        self.edit_marker(closest_marker);
+  def onDClick(self, e):
+    x = e.GetPosition()[0];
+    y = e.GetPosition()[1];
+    closest_marker = self.find_nearby_marker(x - self.figure_x, y);
+    self.selected_marker = closest_marker;
+    if (closest_marker is None):
+      self.create_marker(x);
     else:
+      self.edit_marker(closest_marker);
+
+################################################################################
+################################ ON MOUSE DOWN #################################
+################################################################################
+  def onMouseDown(self, e):
+    x = e.GetPosition()[0];
+    y = e.GetPosition()[1];
+    self.selected_marker = self.find_nearby_marker(x - self.figure_x, y);
+    self.click_position = self.x_to_time(x);
+    if (self.selected_marker is None):
       self.select_graph(e);
-      self.selected_marker = closest_marker;
 
-  def onRelease(self, e):
-    self.selected_marker = None;
+    e.Skip();
 
+################################################################################
+################################ ON MOUSE MOVE #################################
+################################################################################
   def onMouseMove(self, e):
+    x = e.GetPosition()[0];
     if (self.selected_marker is not None):
-      t = self.x_to_time(e.x);
+      t = self.x_to_time(x);
       time_range = self.options["time_range"];
-      self.move_marker(self.selected_marker, self.x_to_time(e.x));
+      self.move_marker(self.selected_marker, self.x_to_time(x));
 
+################################################################################
+################################# ON MOUSE UP ##################################
+################################################################################
+  def onMouseUp(self, e):
+    self.selected_marker = None;
+    e.Skip();
+
+################################################################################
+################################# MOVE MARKER ##################################
+################################################################################
   def move_marker(self, marker, t):
     for l in self.marker_lines[marker["label"]]:
-      l.remove();
+      try:
+        l.remove();
+      except ValueError:
+        pass;
       del l;
     self.marker_lines[marker["label"]] = [ ];
-    marker["time"] = t;
+    marker["time"] += t - self.click_position;
+    self.click_position = t;
     for subplot in self.plots:
       self.draw_marker_line(subplot, marker);
-    self.draw_marker_text(self.plots[-1], marker);
+    self.draw_marker_text(self.plots[-1], marker, "bottom");
+    self.draw_marker_text(self.plots[0], marker, "top");
     self.draw();
 
-  def find_nearby_marker(self, x):
+  def find_nearby_marker(self, x, y):
     start = self.options["time_range"][0];
     stop = self.options["time_range"][1];
     closest_marker = None;
     closest_x = 5;
-    for marker in self.markers:
+    for label in self.markers.keys():
+      marker = self.markers[label];
       marker_x = np.round(float(marker["time"] - start) / (stop - start) * self.figure_width); # pixel X position of marker
       if (np.abs(marker_x - x) < closest_x):
         closest_x = np.abs(marker_x - x);
         closest_marker = marker;
 
+    bottom = self.options["num_visible_graphs"] - (len(self.graph_config) - self.options["top_graph"]);
+    if ((closest_marker is None) and (((bottom <= 0) and (871 <= y <= 889)) or ((bottom == 1) and (749 <= y <= 766)) or ((bottom == 2) and (626 <= y <= 642)) or ((bottom == 3) and (502 <= y <= 519)) or ((bottom == 4) and (379 <= y <= 395)) or ((bottom == 5) and (255 <= y <= 272)) or (13 <= y <= 31))):
+      x = x + self.figure_x;
+      for ( bbox, label ) in self.marker_labels:
+        if (np.floor(bbox.x0) <= x <= np.ceil(bbox.x1)):
+          closest_marker = self.markers[label];
+
     return closest_marker;
 
-  def create_marker(self, e):
-    marker_time = self.x_to_time(e.x);
+  def create_marker(self, x):
+    marker_time = self.x_to_time(x);
     dialog = CreateMarkerDialog(self, marker_time + self.options["timezone"] * 3600000, None, title="New Marker");
     if (dialog.ShowModal() == wx.ID_OK):
       marker = { };
       marker["time"] = int(dialog.time.GetValue()) - self.options["timezone"] * 3600000;
       marker["label"] = dialog.label.GetValue();
-      marker["color"] = "#FF0000";
-      self.markers.append(marker);
+      marker["color"] = dialog.color.GetColour().GetAsString();
+      marker["line"] = dialog.line.GetValue();
+      self.markers[marker["label"]] = marker;
       for subplot in self.plots:
         self.draw_marker_line(subplot, marker);
-      self.draw_marker_text(self.plots[-1], marker);
+      self.draw_marker_text(self.plots[-1], marker, "bottom");
+      self.draw_marker_text(self.plots[0], marker, "top");
       self.draw();
 
   def edit_marker(self, marker):
-    self.selected_marker = marker;
     dialog = CreateMarkerDialog(self, marker["time"] + self.options["timezone"] * 3600000, None, title="Edit Marker", marker=marker);
     if (dialog.ShowModal() == wx.ID_OK):
-      self.selected_marker = None;
       for l in self.marker_lines[marker["label"]]:
         l.remove();
         del l;
       self.marker_lines[marker["label"]] = [ ];
       marker["time"] = int(dialog.time.GetValue()) - self.options["timezone"] * 3600000;
       marker["label"] = dialog.label.GetValue();
-      marker["color"] = "#FF0000";
-      self.markers.append(marker);
+      marker["color"] = dialog.color.GetColour().GetAsString();
+      marker["line"] = dialog.line.GetValue();
+      self.markers[marker["label"]] = marker;
       for subplot in self.plots:
         self.draw_marker_line(subplot, marker);
-      self.draw_marker_text(self.plots[-1], marker);
+      self.draw_marker_text(self.plots[-1], marker, "bottom");
+      self.draw_marker_text(self.plots[0], marker, "top");
       self.draw();
+    self.selected_marker = None;
 
   def x_to_time(self, x):
     pos = (x - self.figure_x) / self.figure_width;
@@ -150,15 +185,21 @@ class GraphWindow(mpl.backends.backend_wxagg.FigureCanvasWxAgg):
 
   def select_graph(self, e):
     ( max_x, max_y ) = self.GetSize();
-    x = e.x;
-    y = max_y - e.y;
+    x = e.GetPosition()[0];
+    y = e.GetPosition()[1];
     top = 86; # Offset from top and bottom
     bottom = 75;
-    sel = int(floor((y - top) / (max_y - top - bottom) * self.options["num_visible_graphs"] + self.options["top_graph"]));
+    sel = int(floor(float(y - top) / (max_y - top - bottom) * self.options["num_visible_graphs"] + self.options["top_graph"]));
     if ((sel >= self.options["top_graph"]) and ((sel - self.options["top_graph"]) < self.options["num_visible_graphs"])):
       self.options["selected_graph"] = sel;
     else:
       self.options["selected_graph"] = None;
+
+################################################################################
+################################### ON UPDATE ##################################
+################################################################################
+  def onUpdate(self, e):
+    self.update();
 
 ################################################################################
 ################################ ON MOUSE WHEEL ################################
@@ -317,6 +358,7 @@ class GraphWindow(mpl.backends.backend_wxagg.FigureCanvasWxAgg):
         entry = self.graph_config[i];
         x = self.hdfqs.load(entry["node"], self.options["time_range"][0], self.options["time_range"][1], self.figure_width, entry["time"], entry["value"]);
         if (x.shape != ( 0, )):
+          x = np.array(sorted(x.tolist(), key=itemgetter(0)));
           mask_expr = self.graph_config[i]["valid"];
           if (mask_expr != ""):
             t = x[:,0];
@@ -327,7 +369,6 @@ class GraphWindow(mpl.backends.backend_wxagg.FigureCanvasWxAgg):
             val = x;
         else:
           val = x;
-        val = np.array(sorted(val.tolist(), key=itemgetter(0)));
         if (temp_data[i].shape == ( 0, 2 )):
           temp_data[i] = val;
         else:
@@ -386,7 +427,9 @@ class GraphWindow(mpl.backends.backend_wxagg.FigureCanvasWxAgg):
         val = val[valid];
 	subplot.plot(t, val);
 
-      subplot.get_axes().set_xlim(self.options["time_range"]);
+      ax = subplot.get_axes();
+      ax.set_xlim(self.options["time_range"]);
+      ax.ticklabel_format(useOffset=False);
       entry = self.graph_config[i];
       result = re.search("^/([A-Za-z0-9]+)/([A-Za-z0-9]+)/([A-Za-z0-9_]+?)(_([A-Za-z0-9]+))?$", entry["node"]).groups();
       if (result[4] is not None):
@@ -398,13 +441,16 @@ class GraphWindow(mpl.backends.backend_wxagg.FigureCanvasWxAgg):
       ax.set_xticklabels(labels);
       ax.set_ylim(entry["yscale"]);
 
-      for marker in self.markers:
+      for label in self.markers.keys():
+        marker = self.markers[label];
         self.draw_marker_line(subplot, marker);
 
       self.plots.append(subplot);
 
-    for marker in self.markers:
-      self.draw_marker_text(subplot, marker);
+    for label in self.markers.keys():
+      marker = self.markers[label];
+      self.draw_marker_text(self.plots[-1], marker, "bottom");
+      self.draw_marker_text(self.plots[0], marker, "top");
     try:
       subplot.set_xlabel(date_label);
     except UnboundLocalError:
@@ -412,19 +458,27 @@ class GraphWindow(mpl.backends.backend_wxagg.FigureCanvasWxAgg):
     self.draw();
 
   def draw_marker_line(self, subplot, marker):
-    l = subplot.axvline(x=marker["time"], ymin=-1000000, ymax=1000000, c=marker["color"], zorder=0, clip_on=False);
-    try:
-      self.marker_lines[marker["label"]].append(l);
-    except KeyError:
-      self.marker_lines[marker["label"]] = [ l ];
+    if (marker["line"]):
+      l = subplot.axvline(x=marker["time"], ymin=-1000000, ymax=1000000, c=marker["color"], zorder=0, clip_on=False);
+      try:
+        self.marker_lines[marker["label"]].append(l);
+      except KeyError:
+        self.marker_lines[marker["label"]] = [ l ];
+    elif (marker["label"] not in self.marker_lines):
+      self.marker_lines[marker["label"]] = [ ];
 
-  def draw_marker_text(self, subplot, marker):
+  def draw_marker_text(self, subplot, marker, location):
     xlim = subplot.get_axes().get_xlim();
     x = marker["time"] + (xlim[1] - xlim[0]) / 100;
     ylim = subplot.get_axes().get_ylim();
-    y = ylim[0] - (ylim[1] - ylim[0])/1.2;
-    t = self.plots[-1].text(x, y, marker["label"], color=marker["color"], zorder=0, clip_on=False);
+    if (location == "bottom"):
+      y = ylim[0] - (ylim[1] - ylim[0])/1.4;
+    elif (location == "top"):
+      y = ylim[1] + (ylim[1] - ylim[0])/1.6;
+    props = dict(boxstyle="round", facecolor="wheat", alpha=0.5);
+    t = subplot.text(x, y, marker["label"], color=marker["color"], zorder=0, clip_on=False, bbox=props);
     self.marker_lines[marker["label"]].append(t);
+    self.marker_labels.append([ t.get_window_extent(renderer=self.figure.canvas.get_renderer()), marker["label"] ]);
 
 ################################################################################
 #################################### KEY DOWN ##################################
@@ -508,8 +562,10 @@ class GraphWindow(mpl.backends.backend_wxagg.FigureCanvasWxAgg):
 	  self.update();
     # List markers
     elif (key_code == 77):
-      dialog = MarkersDialog(self.markers, None);
-      dialog.ShowModal();
+      dialog = MarkersDialog(self, self.markers, None);
+      if (dialog.ShowModal() == wx.ID_OK):
+        self.load_data();
+        self.update();
     else:
       e.Skip();
 
@@ -524,6 +580,8 @@ class GraphWindow(mpl.backends.backend_wxagg.FigureCanvasWxAgg):
         if (self.graph_config[self.options["selected_graph"]]["valid"] != mask_expr):
           self.graph_config[self.options["selected_graph"]]["valid"] = mask_expr;
 	  x = self.data[self.options["selected_graph"]];
+          if (type(x) == np.ndarray):
+            x = np.ma.array(x);
 	  x.mask = False;
 	  if (mask_expr != ""):
 	    t = x[:,0];
@@ -678,7 +736,7 @@ class CreateMarkerDialog(wx.Dialog):
     if (kwargs.has_key("marker")):
       marker = kwargs.pop("marker");
     else:
-      marker = { "time": marker_time, "label": "", "color": "#FF0000" };
+      marker = { "time": marker_time, "label": "", "color": "#000000", "line": False };
 
     super(CreateMarkerDialog, self).__init__(*args, **kwargs);
 
@@ -687,7 +745,7 @@ class CreateMarkerDialog(wx.Dialog):
     panel = wx.Panel(self);
     box = wx.StaticBox(panel, label="Marker");
     box_sizer = wx.StaticBoxSizer(box, wx.VERTICAL);
-    sizer = wx.GridBagSizer(2, 2);
+    sizer = wx.GridBagSizer(4, 2);
 
     sizer.Add(wx.StaticText(panel, label="Time"), pos=( 0, 0 ), flag=wx.LEFT | wx.TOP, border=4);
     self.time = wx.TextCtrl(panel, size=( 150, -1 ));
@@ -697,13 +755,21 @@ class CreateMarkerDialog(wx.Dialog):
     self.label = wx.TextCtrl(panel, size=( 150, -1));
     self.label.SetValue(marker["label"]);
     sizer.Add(self.label, pos=( 1, 1 ));
+    sizer.Add(wx.StaticText(panel, label="Color"), pos=( 2, 0 ), border=4);
+    self.color = wx.ColourPickerCtrl(panel, wx.ID_ANY, wx.BLACK, wx.DefaultPosition, wx.DefaultSize, wx.CLRP_DEFAULT_STYLE | wx.CLRP_SHOW_LABEL);
+    self.color.SetColour(marker["color"]);
+    sizer.Add(self.color, pos=( 2, 1 ));
+    sizer.Add(wx.StaticText(panel, label="Line"), pos=( 3, 0 ), border=4);
+    self.line = wx.CheckBox(panel, label="");
+    self.line.SetValue(marker["line"]);
+    sizer.Add(self.line, pos=( 3, 1 ));
 
     self.time.Bind(wx.EVT_KEY_DOWN, self.on_key_down);
     self.label.Bind(wx.EVT_KEY_DOWN, self.on_key_down);
 
     box_sizer.Add(sizer);
     panel.SetSizer(box_sizer);
-    self.SetSize(( 202, 78 ));
+    self.SetSize(( 202, 156 ));
 
     self.label.SetFocus();
 
@@ -716,8 +782,10 @@ class CreateMarkerDialog(wx.Dialog):
     elif ((key_code == wx.WXK_RETURN) or (key_code == wx.WXK_NUMPAD_ENTER)):
       # Verify no repeated labels
       label = self.label.GetValue();
-      for marker in self.parent.markers:
-        if ((marker["label"] == label) and (self.parent.selected_marker != marker)):
+      line = self.line.GetValue();
+      for marker_label in self.parent.markers.keys():
+        marker = self.parent.markers[marker_label];
+        if ((marker_label == label) and (self.parent.selected_marker != marker)):
           wx.MessageBox("Label %s already used!" % ( label ), "Error", wx.OK | wx.ICON_ERROR);
           return;
 
@@ -750,9 +818,10 @@ class CreateMarkerDialog(wx.Dialog):
 ################################################################################
 class MarkersDialog(wx.Dialog):
 
-  def __init__(self, markers, *args, **kwargs):
+  def __init__(self, parent, markers, *args, **kwargs):
     super(MarkersDialog, self).__init__(*args, **kwargs);
 
+    self.parent = parent;
     self.markers = markers;
 
     self.create_gui();
@@ -765,16 +834,22 @@ class MarkersDialog(wx.Dialog):
     self.label = wx.TextCtrl(panel, size=( 150, -1 ));
     box_sizer.Add(self.label);
 
-    labels = [ marker["label"] for marker in self.markers ];
+    labels = self.markers.keys();
     labels.sort();
-    self.list = wx.ListBox(panel, choices=labels, size=( 150, 250 ));
+    self.list = wx.ListCtrl(panel, size=( 150, 250 ));
+    self.list.Show(True);
+    self.list.InsertColumn(0, "Marker");
+    for name in self.markers.keys():
+      self.list.InsertStringItem(0, name);
     box_sizer.Add(self.list);
 
     self.label.SetFocus();
     panel.SetSizer(box_sizer);
     self.SetSize(( 161, 300 ));
 
-    self.Bind(wx.EVT_KEY_DOWN, self.on_key_down);
+    self.label.Bind(wx.EVT_KEY_DOWN, self.on_key_down);
+    self.list.Bind(wx.EVT_KEY_DOWN, self.on_key_down);
+    self.Bind(wx.EVT_LIST_ITEM_ACTIVATED, self.on_select, self.list);
 
   def on_key_down(self, e):
     key_code = e.GetKeyCode();
@@ -782,3 +857,14 @@ class MarkersDialog(wx.Dialog):
     if (key_code == wx.WXK_ESCAPE):
       self.EndModal(wx.ID_CANCEL);
       self.Close();
+    else:
+      e.Skip();
+
+  def on_select(self, e):
+    label = e.GetText();
+    marker = self.markers[label];
+    time_range = self.parent.options["time_range"];
+    span = time_range[1] - time_range[0];
+    self.parent.options["time_range"] = [ marker["time"] - int(np.ceil(span/2.0)), marker["time"] + int(np.floor(span/2.0)) ];
+    self.EndModal(wx.ID_OK);
+    self.Close();

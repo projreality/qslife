@@ -1,5 +1,6 @@
 import matplotlib as mpl;
 import os;
+import seaborn as sns;
 import sys;
 from tables import *;
 import wx;
@@ -13,7 +14,11 @@ for path in os.listdir("lib"):
       exec("from " + subpath[:-3] + " import *;");
 
 mpl.interactive(True);
-mpl.use("WXAgg");
+
+# Render negative sign properly
+mpl.rcParams["font.sans-serif"].insert(0, "Liberation Sans");
+mpl.rcParams["font.sans-serif"].insert(0, "Arial");
+mpl.rcParams["font.family"] = "sans-serif";
 
 from matplotlib.backends.backend_wxagg import FigureCanvasWxAgg;
 from matplotlib.figure import Figure;
