@@ -227,7 +227,14 @@ class QSLife(wx.Frame):
 ############################### EDIT PREFERENCES ###############################
   def onEditPreferences(self, e):
     dialog = PreferencesDialog(self.graphs.options, None, title="Preferences");
-    dialog.Show();
+    if (dialog.ShowModal() == wx.ID_OK):
+      timezone = int(dialog.timezone.GetValue());
+      if ((timezone >= -12) and (timezone <= 14)):
+        self.graphs.options["timezone"] = timezone;
+        self.graphs.update();
+      else:
+	self.SetStatusText("Invalid timezone: %s" % dialog.timezone.GetValue());
+
 
 #################################### IMPORT ####################################
   def onImport(self, e):

@@ -21,6 +21,7 @@ class PreferencesDialog(wx.Dialog):
     sizer.Add(wx.StaticText(panel, label="Timezone:"), pos=( 1, 1 ), border=4)
 
     self.timezone = wx.TextCtrl(panel, size=( 240, -1 ));
+    self.timezone.SetValue(str(self.options["timezone"]));
     self.timezone.Bind(wx.EVT_KEY_DOWN, self.onKeyDown);
     sizer.Add(self.timezone, pos=( 1, 2 ), span=( 1, 4 ) );
 
