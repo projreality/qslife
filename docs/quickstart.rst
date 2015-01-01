@@ -8,7 +8,7 @@ Before starting this tutorial, download the `example HDFQS datastore <http://www
 
 Start QSLife on the command line::
 
-  python QSLife
+  python QSLife.py
 
 This brings up the the QSLife window, with no configuration loaded.
 
