@@ -205,6 +205,7 @@ class QSLife(wx.Frame):
       path = dialog.GetPath();
       self.load_file(path);
       self.onFileSaveAs(e);
+      self.menu_edit_preferences.Enable(True);
 
 ################################### FILE OPEN ##################################
   def onFileOpen(self, e):

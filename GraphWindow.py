@@ -476,7 +476,7 @@ class GraphWindow(mpl.backends.backend_wxagg.FigureCanvasWxAgg):
 
   def draw_marker_line(self, subplot, marker):
     if (marker["line"]):
-      l = subplot.axvline(x=marker["time"], ymin=-1000000, ymax=1000000, c=marker["color"], zorder=0, clip_on=False);
+      l = subplot.axvline(x=marker["time"], ymin=-1000000, ymax=1000000, c=marker["color"], zorder=self.options["num_visible_graphs"], clip_on=False);
       try:
         self.marker_lines[marker["label"]].append(l);
       except KeyError:
@@ -762,31 +762,37 @@ class CreateMarkerDialog(wx.Dialog):
     panel = wx.Panel(self);
     box = wx.StaticBox(panel, label="Marker");
     box_sizer = wx.StaticBoxSizer(box, wx.VERTICAL);
-    sizer = wx.GridBagSizer(4, 2);
+    sizer = wx.GridBagSizer(5, 4);
 
     sizer.Add(wx.StaticText(panel, label="Time"), pos=( 0, 0 ), flag=wx.LEFT | wx.TOP, border=4);
     self.time = wx.TextCtrl(panel, size=( 150, -1 ));
     self.time.SetValue(time.strftime("%m/%d/%Y %H:%M:%S", time.gmtime(np.floor(marker_time/1000000000))));
-    sizer.Add(self.time, pos=( 0, 1 ));
+    sizer.Add(self.time, pos=( 0, 1 ), span=( 1, 3 ));
     sizer.Add(wx.StaticText(panel, label="Label"), pos=( 1, 0 ), border=4);
     self.label = wx.TextCtrl(panel, size=( 150, -1));
     self.label.SetValue(marker["label"]);
-    sizer.Add(self.label, pos=( 1, 1 ));
+    sizer.Add(self.label, pos=( 1, 1 ), span=( 1, 3 ));
     sizer.Add(wx.StaticText(panel, label="Color"), pos=( 2, 0 ), border=4);
     self.color = wx.ColourPickerCtrl(panel, wx.ID_ANY, wx.BLACK, wx.DefaultPosition, wx.DefaultSize, wx.CLRP_DEFAULT_STYLE | wx.CLRP_SHOW_LABEL);
     self.color.SetColour(marker["color"]);
-    sizer.Add(self.color, pos=( 2, 1 ));
+    sizer.Add(self.color, pos=( 2, 1 ), span=( 1, 3 ));
     sizer.Add(wx.StaticText(panel, label="Line"), pos=( 3, 0 ), border=4);
     self.line = wx.CheckBox(panel, label="");
     self.line.SetValue(marker["line"]);
-    sizer.Add(self.line, pos=( 3, 1 ));
+    sizer.Add(self.line, pos=( 3, 1 ), span=( 1, 3 ));
+    ok_button = wx.Button(panel, label="OK");
+    sizer.Add(ok_button, pos=( 4, 1 ), span=( 1, 1 ));
+    cancel_button = wx.Button(panel, label="Cancel");
+    sizer.Add(cancel_button, pos=( 4, 2 ), span=( 1, 1 ));
 
     self.time.Bind(wx.EVT_KEY_DOWN, self.on_key_down);
     self.label.Bind(wx.EVT_KEY_DOWN, self.on_key_down);
+    ok_button.Bind(wx.EVT_BUTTON, self.onOk);
+    cancel_button.Bind(wx.EVT_BUTTON, self.onCancel);
 
     box_sizer.Add(sizer);
     panel.SetSizer(box_sizer);
-    self.SetSize(( 202, 156 ));
+    self.SetSize(( 230, 185 ));
 
     self.label.SetFocus();
 
@@ -794,41 +800,47 @@ class CreateMarkerDialog(wx.Dialog):
     key_code = e.GetKeyCode();
 
     if (key_code == wx.WXK_ESCAPE):
-      self.EndModal(wx.ID_CANCEL);
-      self.Close();
+      self.onCancel(e);
     elif ((key_code == wx.WXK_RETURN) or (key_code == wx.WXK_NUMPAD_ENTER)):
-      # Verify no repeated labels
-      label = self.label.GetValue();
-      line = self.line.GetValue();
-      for marker_label in self.parent.markers.keys():
-        marker = self.parent.markers[marker_label];
-        if ((marker_label == label) and (self.parent.selected_marker != marker)):
-          wx.MessageBox("Label %s already used!" % ( label ), "Error", wx.OK | wx.ICON_ERROR);
-          return;
-
-      # Parse time and verify it is valid
-      try:
-        marker_time = time.strptime(self.time.GetValue(), "%m/%d/%Y %H:%M:%S");
-      except ValueError:
-        try:
-          marker_time = time.strptime(self.time.GetValue(), "%m/%d/%Y %H:%M");
-        except ValueError:
-          try:
-            marker_time = time.strptime(self.time.GetValue(), "%m/%d/%Y");
-          except:
-            marker_time = None;
-
-      if (marker_time is None):
-        wx.MessageBox("Invalid time", "Error", wx.OK | wx.ICON_ERROR);
-        return;
-
-      marker_time = calendar.timegm(marker_time) * 1000000000;
-      if (marker_time is not None):
-        self.time.SetValue(str(marker_time));
-        self.EndModal(wx.ID_OK);
-        self.Close();
+      self.onOk(e);
     else:
       e.Skip();
+
+  def onOk(self, e):
+    # Verify no repeated labels
+    label = self.label.GetValue();
+    line = self.line.GetValue();
+    for marker_label in self.parent.markers.keys():
+      marker = self.parent.markers[marker_label];
+      if ((marker_label == label) and (self.parent.selected_marker != marker)):
+        wx.MessageBox("Label %s already used!" % ( label ), "Error", wx.OK | wx.ICON_ERROR);
+        return;
+
+    # Parse time and verify it is valid
+    try:
+      marker_time = time.strptime(self.time.GetValue(), "%m/%d/%Y %H:%M:%S");
+    except ValueError:
+      try:
+        marker_time = time.strptime(self.time.GetValue(), "%m/%d/%Y %H:%M");
+      except ValueError:
+        try:
+          marker_time = time.strptime(self.time.GetValue(), "%m/%d/%Y");
+        except:
+          marker_time = None;
+
+    if (marker_time is None):
+      wx.MessageBox("Invalid time", "Error", wx.OK | wx.ICON_ERROR);
+      return;
+
+    marker_time = calendar.timegm(marker_time) * 1000000000;
+    if (marker_time is not None):
+      self.time.SetValue(str(marker_time));
+      self.EndModal(wx.ID_OK);
+      self.Close();
+
+  def onCancel(self, e):
+    self.EndModal(wx.ID_CANCEL);
+    self.Close();
 
 ################################################################################
 ################################ MARKERS DIALOG ################################
