@@ -22,14 +22,6 @@ import sys;
 from tables import *;
 import wx;
 
-for path in os.listdir("lib"):
-  sys.path.append("lib/" + path);
-
-for path in os.listdir("lib"):
-  for subpath in os.listdir("lib/" + path):
-    if (subpath[-3:] == ".py"):
-      exec("from " + subpath[:-3] + " import *;");
-
 mpl.interactive(True);
 
 # Render negative sign properly
@@ -41,7 +33,7 @@ from matplotlib.backends.backend_wxagg import FigureCanvasWxAgg;
 from matplotlib.figure import Figure;
 
 from GraphWindow import GraphWindow;
-from HDFQS import *;
+from hdfqs import HDFQS;
 from PreferencesDialog import PreferencesDialog;
 
 class QSLife(wx.Frame):
